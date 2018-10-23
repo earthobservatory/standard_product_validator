@@ -12,6 +12,7 @@ import pickle
 import hashlib
 import requests
 from hysds.celery import app
+import build_blacklist_product
 #from requests.auth import HTTPBasicAuth
 #from hysds_commons.net_utils import get_container_host_ip
 
@@ -36,7 +37,8 @@ def main():
     add_to_blacklist = determine_failed(missing, count_to_blacklist)
     print('{} jobs have failed {} times or more. Adding each as a blacklist product...'.format(len(add_to_blacklist), count_to_blacklist))
     # placeholder: generate blacklist product from each ifg in new_blacklist
-
+    for item in add_to_blacklist:
+        build_blacklist_product.build(item)
 
 def determine_failed(missing, count_to_blacklist):
     '''
