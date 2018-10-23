@@ -1,5 +1,5 @@
 {
-    "label": "Standard Product Validator",
+    "label": "Validate Standard Product IFG-cfgs",
     "submission_type": "individual",
     "params" : [
     {

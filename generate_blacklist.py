@@ -25,7 +25,7 @@ def main():
     '''
     print('Determining variables & ES products...')
     ctx = load_context()
-    ifg_version = ctx['ifg_version']
+    ifg_version = ctx['ifg_config_version']
     count_to_blacklist = ctx['count_to_blacklist']
     ifg_configs = build_hashed_dict(get_ifg_configs(ifg_version))
     ifgs = build_hashed_dict(get_ifgs())
