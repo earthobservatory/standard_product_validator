@@ -86,8 +86,8 @@ def build_hashed_dict(object_list):
 
 def gen_hash(es_object):
     '''Generates a hash from the master and slave scene list'''
-    master = pickle.dumps(es_object['_source']['metadata']['master_scenes'], -1)
-    slave = pickle.dumps(es_object['_source']['metadata']['slave_scenes'], -1)
+    master = pickle.dumps(sorted(es_object['_source']['metadata']['master_scenes'], -1))
+    slave = pickle.dumps(sorted(es_object['_source']['metadata']['slave_scenes'], -1))
     return '{}_{}'.format(hashlib.md5(master).hexdigest(), hashlib.md5(slave).hexdigest())
 
 def get_ifgs():
