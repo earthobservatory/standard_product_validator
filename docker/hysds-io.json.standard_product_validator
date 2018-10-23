@@ -1,0 +1,19 @@
+{
+    "label": "Standard Product Validator",
+    "submission_type": "individual",
+    "params" : [
+    {
+      "name": "ifg_config_version",
+      "from": "submitter",
+      "type": "text",
+      "default": "v2.0.0"
+    },
+    {
+      "name": "blacklist_at_failure_count",
+      "from": "submitter",
+      "type": "number",
+      "lambda": "lambda x: int(x)",
+      "default": "3"
+    }
+    ]
+}
