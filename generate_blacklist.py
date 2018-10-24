@@ -36,7 +36,6 @@ def main():
     print('Found {} missing IFGs. Checking jobs.')
     add_to_blacklist = determine_failed(missing, count_to_blacklist)
     print('{} jobs have failed {} times or more. Adding each as a blacklist product...'.format(len(add_to_blacklist), count_to_blacklist))
-    # placeholder: generate blacklist product from each ifg in new_blacklist
     for item in add_to_blacklist:
         build_blacklist_product.build(item)
 
@@ -47,8 +46,8 @@ def determine_failed(missing, count_to_blacklist):
     ifg-cfg products. Param missing is the ifg-cfg ES object list.
     '''
     mozart_ip = app.conf['MOZART_ES_URL'].rstrip(':9200').replace('http://', 'https://')
-    mozart_url = '{0}/es/grq_*_ifg/_search'.format(mozart_ip)
-    es_query = {"query":{"bool":{"must":[{"term":{"job.job_info.job_payload.job_type":"job:job-sciflo-s1-ifg:develop"}}, {"range":{"job.retry_count":{"gte":count_to_blacklist}}}]}}, "from":0, "size":1000}
+    mozart_url = '{0}/es/job_status-current/_search'.format(mozart_ip)
+    es_query = {"query":{"bool":{"must":[{"term":{"status":"job-failed"}},{"term":{"job.job_info.job_payload.job_type":"job-sciflo-s1-ifg"}},{"range":{"job.retry_count":{"gte":count_to_blacklist}}}]}},"from":0,"size":1000}
     all_failed = query_es(mozart_url, es_query)
     add_to_blacklist = []
     for ifg_cfg in missing:
@@ -87,10 +86,16 @@ def build_hashed_dict(object_list):
     return hashed_dict
 
 def gen_hash(es_object):
-    '''Generates a hash from the master and slave scene list'''
-    master = pickle.dumps(sorted(es_object['_source']['metadata']['master_scenes'], -1))
-    slave = pickle.dumps(sorted(es_object['_source']['metadata']['slave_scenes'], -1))
-    return '{}_{}'.format(hashlib.md5(master).hexdigest(), hashlib.md5(slave).hexdigest())
+    '''Generates a hash from the master and slave scene list''' 
+    met = es_object['source']['metadata']
+    if 'master_scenes' in met.keys():
+        master = pickle.dumps(sorted(met['master_scenes'], -1))
+        slave = pickle.dumps(sorted(met['slave_scenes'], -1))
+        return '{}_{}'.format(hashlib.md5(master).hexdigest(), hashlib.md5(slave).hexdigest())
+    else:
+        master = pickle.dumps(sorted(met['master_ids'].split(','), -1))
+        slave = pickle.dumps(sorted(met['slave_ids'].split(','), -1))
+        return '{}_{}'.format(hashlib.md5(master).hexdigest(), hashlib.md5(slave).hexdigest())
 
 def get_ifgs():
     '''
