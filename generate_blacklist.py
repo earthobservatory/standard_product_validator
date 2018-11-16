@@ -33,7 +33,7 @@ def main():
     print('Found {} ifg-cfgs, {} ifgs, and {} blacklist products.'.format(len(ifg_configs.keys()), len(ifgs.keys()), len(blacklist.keys())))
     print('Determining missing IFGs...')
     missing = determine_missing_ifgs(ifg_configs, ifgs, blacklist)
-    print('Found {} missing IFGs. Checking jobs.')
+    print('Found {} missing IFGs. Checking jobs.'.format(len(missing)))
     add_to_blacklist = determine_failed(missing, count_to_blacklist)
     print('{} jobs have failed {} times or more. Adding each as a blacklist product...'.format(len(add_to_blacklist), count_to_blacklist))
     for item in add_to_blacklist:
@@ -49,6 +49,7 @@ def determine_failed(missing, count_to_blacklist):
     mozart_url = '{0}/job_status-current/_search'.format(mozart_ip)
     es_query = {"query":{"bool":{"must":[{"term":{"status":"job-failed"}},{"term":{"job.job_info.job_payload.job_type":"job-sciflo-s1-ifg"}},{"range":{"job.retry_count":{"gte":count_to_blacklist}}}]}},"from":0,"size":1000}
     all_failed = query_es(mozart_url, es_query)
+    print('----------------------------------\nall failed jobs: {}i\n-------------------------------'.format(all_failed))
     add_to_blacklist = []
     for ifg_cfg in missing:
         if is_in(ifg_cfg, all_failed):
@@ -59,7 +60,11 @@ def is_in(ifg_cfg, failed_job_list):
     '''
     Returns True if the ifg_cfg object is inside the failed_job_list. False otherwise.
     '''
-    # PLACEHOLDER
+    if len(failed_job_list) == 0:
+        return False
+   
+
+    # PLACEHOLDER 
     import random
     return random.randint(0, 1)
 
