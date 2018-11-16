@@ -45,8 +45,8 @@ def determine_failed(missing, count_to_blacklist):
     blacklist, have failed more than count_to_blacklist times. Returns those
     ifg-cfg products. Param missing is the ifg-cfg ES object list.
     '''
-    mozart_ip = app.conf['MOZART_ES_URL'].rstrip(':9200').replace('http://', 'https://')
-    mozart_url = '{0}/es/job_status-current/_search'.format(mozart_ip)
+    mozart_ip = app.conf['JOBS_ES_URL'].replace('https://', 'http://').rstrip('/')
+    mozart_url = '{0}/job_status-current/_search'.format(mozart_ip)
     es_query = {"query":{"bool":{"must":[{"term":{"status":"job-failed"}},{"term":{"job.job_info.job_payload.job_type":"job-sciflo-s1-ifg"}},{"range":{"job.retry_count":{"gte":count_to_blacklist}}}]}},"from":0,"size":1000}
     all_failed = query_es(mozart_url, es_query)
     add_to_blacklist = []
@@ -87,14 +87,14 @@ def build_hashed_dict(object_list):
 
 def gen_hash(es_object):
     '''Generates a hash from the master and slave scene list''' 
-    met = es_object['source']['metadata']
+    met = es_object['_source']['metadata']
     if 'master_scenes' in met.keys():
-        master = pickle.dumps(sorted(met['master_scenes'], -1))
-        slave = pickle.dumps(sorted(met['slave_scenes'], -1))
+        master = pickle.dumps(sorted(met['master_scenes']))
+        slave = pickle.dumps(sorted(met['slave_scenes']))
         return '{}_{}'.format(hashlib.md5(master).hexdigest(), hashlib.md5(slave).hexdigest())
     else:
-        master = pickle.dumps(sorted(met['master_ids'].split(','), -1))
-        slave = pickle.dumps(sorted(met['slave_ids'].split(','), -1))
+        master = pickle.dumps(sorted(met['master_ids'].split(',')))
+        slave = pickle.dumps(sorted(met['slave_ids'].split(',')))
         return '{}_{}'.format(hashlib.md5(master).hexdigest(), hashlib.md5(slave).hexdigest())
 
 def get_ifgs():
@@ -137,6 +137,7 @@ def query_es(grq_url, es_query):
         from_position = 0
         es_query['from'] = from_position
     # run the query and iterate until all the results have been returned
+    print('querying: {}'.format(grq_url))
     response = requests.post(grq_url, data=json.dumps(es_query), timeout=60, verify=False)
     response.raise_for_status()
     results = json.loads(response.text, encoding='ascii')
