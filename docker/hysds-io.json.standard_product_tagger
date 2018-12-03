@@ -4,7 +4,7 @@
     "params" : [
     {
       "name": "ifg_index",
-      "from": "dataset_jpath:_index",
+      "from": "dataset_jpath:_index"
     },
     {
       "name": "orbitNumber",
