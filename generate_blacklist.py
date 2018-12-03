@@ -8,6 +8,7 @@ Queries ES for ifg config files. Determines if products
 
 from __future__ import print_function
 import json
+import pprint
 import pickle
 import hashlib
 import requests
@@ -47,36 +48,38 @@ def determine_failed(missing, count_to_blacklist):
     '''
     mozart_ip = app.conf['JOBS_ES_URL'].replace('https://', 'http://').rstrip('/')
     mozart_url = '{0}/job_status-current/_search'.format(mozart_ip)
-    es_query = {"query":{"bool":{"must":[{"term":{"status":"job-failed"}},{"term":{"job.job_info.job_payload.job_type":"job-sciflo-s1-ifg"}},{"range":{"job.retry_count":{"gte":count_to_blacklist}}}]}},"from":0,"size":1000}
+
+    #es_query = {"query":{"bool":{"must":[{"term":{"status":"job-failed"}},{"term":{"job.job_info.job_payload.job_type":"job-sciflo-s1-ifg"}},{"range":{"job.retry_count":{"gte":count_to_blacklist}}}]}},"from":0,"size":1000}
+    if count_to_blacklist > 0:
+        es_query = {"query":{"bool":{"must":[{"term":{"status":"job-failed"}},{"term":{"job.job_info.job_payload.job_type":"job:sentinel_ifg-singlescene"}},{"range":{"job.retry_count":{"gte":count_to_blacklist}}}]}},"from":0,"size":1000}
+    else:
+        es_query = {"query":{"bool":{"must":[{"term":{"job.job_info.job_payload.job_type":"job:sentinel_ifg-singlescene"}},{"term":{"status":"job-failed"}}],"must_not":[],"should":[]}},"from":0,"size":1000,"sort":[],"aggs":{}}
     all_failed = query_es(mozart_url, es_query)
     print('----------------------------------\nall failed jobs: {}\n-------------------------------'.format(all_failed))
+    all_failed_dict = build_hashed_dict(all_failed)
     add_to_blacklist = []
     for ifg_cfg in missing:
-        if is_in(ifg_cfg, all_failed):
+        if is_in(ifg_cfg, all_failed_dict):
             add_to_blacklist.append(ifg_cfg)
     return add_to_blacklist
 
-def is_in(ifg_cfg, failed_job_list):
+def is_in(ifg_cfg, all_failed_dict):
     '''
     Returns True if the ifg_cfg object is inside the failed_job_list. False otherwise.
     '''
-    if len(failed_job_list) == 0:
-        return False
-   
-
-    # PLACEHOLDER 
-    import random
-    return random.randint(0, 1)
+    ifg_cfg_hash = gen_hash(ifg_cfg)
+    if all_failed_dict.get(ifg_cfg_hash):
+        return True
+    return False
 
 def determine_missing_ifgs(ifg_configs, ifgs, blacklist):
     '''
     Determines the ifgs that have not been produced from the ifg configs.
     '''
-    ifg_keys = ifgs.keys()
-    blacklist_keys = blacklist.keys()
     missing = []
-    for key in ifg_configs.keys():
-        if not key in ifg_keys and not key in blacklist_keys:
+    for key in ifg_configs.keys():   
+        print('checking for: {}'.format(key))
+        if not key in ifgs and not key in blacklist:
             missing.append(ifg_configs[key])
     return missing
 
@@ -92,22 +95,32 @@ def build_hashed_dict(object_list):
 
 def gen_hash(es_object):
     '''Generates a hash from the master and slave scene list''' 
-    met = es_object['_source']['metadata']
+    met = es_object.get('_source', {}).get('metadata')
+    if met is None:
+        met = es_object.get('_source', {}).get('context')
+    if met is None:
+        met = es_object.get('job', {}).get('params') 
+    #if met is None:
+    #    pp = pprint.PrettyPrinter(depth=6)
+    #    pp.pprint(es_object)
+    #    raise Exception('invalid met.')
     if 'master_scenes' in met.keys():
-        master = pickle.dumps(sorted(met['master_scenes']))
-        slave = pickle.dumps(sorted(met['slave_scenes']))
+        master = [x.replace('acquisition-', '') for x in met['master_scenes']]
+        slave = [x.replace('acquisition-', '') for x in met['slave_scenes']]
+        master = pickle.dumps(sorted(master))
+        slave = pickle.dumps(sorted(slave))
         return '{}_{}'.format(hashlib.md5(master).hexdigest(), hashlib.md5(slave).hexdigest())
-    else:
-        master = pickle.dumps(sorted(met['master_ids'].split(',')))
-        slave = pickle.dumps(sorted(met['slave_ids'].split(',')))
-        return '{}_{}'.format(hashlib.md5(master).hexdigest(), hashlib.md5(slave).hexdigest())
+    #else:
+    #    master = pickle.dumps(sorted(met['master_ids'].split(',')))
+    #    slave = pickle.dumps(sorted(met['slave_ids'].split(',')))
+    #    return '{}_{}'.format(hashlib.md5(master).hexdigest(), hashlib.md5(slave).hexdigest())
 
 def get_ifgs():
     '''
     Returns all ifg products on ES
     '''
     grq_ip = app.conf['GRQ_ES_URL'].rstrip(':9200').replace('http://', 'https://')
-    grq_url = '{0}/es/grq_*_ifg/_search'.format(grq_ip)
+    grq_url = '{0}/es/grq_*_s1-ifg/_search'.format(grq_ip)
     es_query = {"query":{"bool":{"must":[{"match_all":{}}]}}, "from":0, "size":1000}
     return query_es(grq_url, es_query)
 
