@@ -9,7 +9,7 @@
     {
       "name": "orbitNumber",
       "from": "dataset_jpath:_source.metadata.orbitNumber"
-    }
+    },
     {
       "name": "location",
       "from": "submitter",
