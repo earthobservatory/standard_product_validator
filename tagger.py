@@ -16,11 +16,11 @@ def main():
     '''main function, tags all appropriate ifgs using the given input ifg'''
     #load context & get values
     ctx = load_context()
-    location = ctx.get('location')
+    coordinates = ctx.get('location')[0].get('coordinates')
     ifg_index = ctx.get('ifg_index')
     orbitNumber = ctx.get('orbitNumber')
     #query AOIs over location
-    aois = get_aois(location)
+    aois = get_aois(coordinates)
     print('found AOIs: {}'.format([x.get('_id') for x in aois]))
     #for each AOI
     for aoi in aois:
@@ -57,11 +57,14 @@ def load_context():
     except:
         raise Exception('unable to parse _context.json from work directory')
 
-def get_aois(location):
+def get_aois(coordinates):
     '''gets AOIs over the given location that have the standard_product machine tag'''
+    print('coordinates: {}'.format(coordinates))
+    #location['shape']['type'] = 'polygon'
     grq_ip = app.conf['GRQ_ES_URL'].replace(':9200', '').replace('http://', 'https://')
     grq_url = '{0}/es/grq_*_area_of_interest/_search'.format(grq_ip)
-    grq_query = {"query":{"filtered":{"query":{"bool":{"must":[{"term":{"dataset_type":"area_of_interest"}}]}}, "filter":{"geo_shape":{"location":location}}}}, "fields":["_id", "_source"]}
+    #grq_query = {"query":{"filtered":{"query":{"bool":{"must":[{"term":{"dataset_type":"area_of_interest"}}]}}, "filter":{"geo_shape":{"location":location}}}}, "fields":["_id", "_source"]}
+    grq_query = {"query":{"geo_shape":{"location":{"shape":{"type": "polygon", "coordinates": coordinates}}}}}
     results = query_es(grq_url, grq_query)
     #return only standard product tags
     #std_only = []
@@ -79,13 +82,14 @@ def get_objects(object_type, aoi, orbitNumber, index=None):
         idx = index
     else:
         idx_dct = {'ifg':'grq_*_s1-ifg', 'acq-list':'grq_*_acq-list', 'ifg-blacklist':'grq_*_blacklist'}
-        idx = idx.get(object_type)
+        idx = idx_dct.get(object_type)
     starttime = aoi.get('_source', {}).get('starttime')
     endtime = aoi.get('_source', {}).get('endtime')
     location = aoi.get('_source', {}).get('location')
+    location['type'] = 'polygon'
     grq_ip = app.conf['GRQ_ES_URL'].replace(':9200', '').replace('http://', 'https://')
     grq_url = '{0}/es/{1}/_search'.format(grq_ip, idx)
-    grq_query = {"query":{"filtered":{"query":{"bool":{"must":[{"range":{"starttime":{"from":starttime, "to":endtime}}}, {"term":{"metadata.orbitNumber":orbitNumber}}]}}, "filter":{"geo_shape":{"location":location}}}}, "sort":[{"_timestamp":{"order":"desc"}}], "fields":["_timestamp", "_source", "_id"]}
+    grq_query = {"query":{"filtered":{"query":{"bool":{"must":[{"range":{"starttime":{"from":starttime, "to":endtime}}}, {"term":{"metadata.orbitNumber":orbitNumber}}]}}, "filter":{"geo_shape":{"location":location}}}}}
     results = query_es(grq_url, grq_query)
     return results
 
@@ -107,9 +111,9 @@ def query_es(grq_url, es_query):
         es_query['from'] = from_position
     #run the query and iterate until all the results have been returned
     print('querying: {}\n{}'.format(grq_url, json.dumps(es_query)))
-    response = requests.get(grq_url, data=json.dumps(es_query), timeout=60, verify=False)
+    response = requests.get(grq_url, data=json.dumps(es_query), verify=False)
     print('status code: {}'.format(response.status_code))
-    print('response text: {}'.format(response.text))
+    #print('response text: {}'.format(response.text))
     response.raise_for_status()
     results = json.loads(response.text, encoding='ascii')
     results_list = results.get('hits', {}).get('hits', [])
