@@ -9,6 +9,8 @@ import pickle
 import hashlib
 import requests
 from hysds.celery import app
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def main():
     '''main function, tags all appropriate ifgs using the given input ifg'''
@@ -19,6 +21,7 @@ def main():
     orbitNumber = ctx.get('orbitNumber')
     #query AOIs over location
     aois = get_aois(location)
+    print('found AOIs: {}'.format([x.get('_id') for x in aois]))
     #for each AOI
     for aoi in aois:
         aoi_name = aoi['_id']
@@ -56,10 +59,16 @@ def load_context():
 
 def get_aois(location):
     '''gets AOIs over the given location that have the standard_product machine tag'''
-    grq_ip = app.conf['GRQ_ES_URL'].rstrip(':9200').replace('http://', 'https://')
+    grq_ip = app.conf['GRQ_ES_URL'].replace(':9200', '').replace('http://', 'https://')
     grq_url = '{0}/es/grq_*_area_of_interest/_search'.format(grq_ip)
-    grq_query = {"query":{"filtered":{"query":{"bool":{"must":[{"term":{"dataset_type.raw":"area_of_interest"}}, {"term":{"metadata.tags.raw":"standard_product"}}]}}, "filter":{"geo_shape":{"location":location}}}}, "fields":["_id", "_source"]}
+    grq_query = {"query":{"filtered":{"query":{"bool":{"must":[{"term":{"dataset_type":"area_of_interest"}}]}}, "filter":{"geo_shape":{"location":location}}}}, "fields":["_id", "_source"]}
     results = query_es(grq_url, grq_query)
+    #return only standard product tags
+    #std_only = []
+    #for prod in results:
+    #    if 'standard_product' in prod.get('_source', {}).get('metadata', {}).get('tags', []):
+    #        std_only.append(prod)
+    #return std_only
     return results
 
 def get_objects(object_type, aoi, orbitNumber, index=None):
@@ -74,7 +83,7 @@ def get_objects(object_type, aoi, orbitNumber, index=None):
     starttime = aoi.get('_source', {}).get('starttime')
     endtime = aoi.get('_source', {}).get('endtime')
     location = aoi.get('_source', {}).get('location')
-    grq_ip = app.conf['GRQ_ES_URL'].rstrip(':9200').replace('http://', 'https://')
+    grq_ip = app.conf['GRQ_ES_URL'].replace(':9200', '').replace('http://', 'https://')
     grq_url = '{0}/es/{1}/_search'.format(grq_ip, idx)
     grq_query = {"query":{"filtered":{"query":{"bool":{"must":[{"range":{"starttime":{"from":starttime, "to":endtime}}}, {"term":{"metadata.orbitNumber":orbitNumber}}]}}, "filter":{"geo_shape":{"location":location}}}}, "sort":[{"_timestamp":{"order":"desc"}}], "fields":["_timestamp", "_source", "_id"]}
     results = query_es(grq_url, grq_query)
@@ -96,17 +105,22 @@ def query_es(grq_url, es_query):
     else:
         from_position = 0
         es_query['from'] = from_position
-    # run the query and iterate until all the results have been returned
-    print('querying: {}'.format(grq_url))
-    response = requests.post(grq_url, data=json.dumps(es_query), timeout=60, verify=False)
+    #run the query and iterate until all the results have been returned
+    print('querying: {}\n{}'.format(grq_url, json.dumps(es_query)))
+    response = requests.get(grq_url, data=json.dumps(es_query), timeout=60, verify=False)
+    print('status code: {}'.format(response.status_code))
+    print('response text: {}'.format(response.text))
     response.raise_for_status()
     results = json.loads(response.text, encoding='ascii')
-    results_list = results['hits']['hits']
-    total_count = results['hits']['total']
+    results_list = results.get('hits', {}).get('hits', [])
+    total_count = results.get('hits', {}).get('total', 0)
     for i in range(iterator_size, total_count, iterator_size):
         es_query['from'] = i
-        response = requests.post(grq_url, data=json.dumps(es_query), timeout=60, verify=False)
-        results_list.extend(results['hits']['hits'])
+        print('querying: {}\n{}'.format(grq_url, json.dumps(es_query)))
+        response = requests.get(grq_url, data=json.dumps(es_query), timeout=60, verify=False)
+        response.raise_for_status()
+        results = json.loads(response.text, encoding='ascii')
+        results_list.extend(results.get('hits', {}).get('hits', []))
     return results_list
 
 def are_match(es_object1, es_object2):
@@ -153,7 +167,7 @@ def tag_all(object_list, tag, index):
 def add_tags(index, uid, tags):
     '''updates the product with the given tag'''
     grq_ip = app.conf['GRQ_ES_URL'].rstrip(':9200').replace('http://', 'https://')
-    grq_url = '{0}/es/{1}/{2}/_update'.format(grq_ip, index, uid)
+    grq_url = '{0}/{1}/{2}/_update'.format(grq_ip, index, uid)
     es_query = {"doc" : {"metadata": {"tags" : tags}}}
     #print('querying {} with {}'.format(grq_url, es_query))
     response = requests.post(grq_url, data=json.dumps(es_query), timeout=60, verify=False)
