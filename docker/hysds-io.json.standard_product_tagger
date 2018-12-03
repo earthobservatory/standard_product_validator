@@ -1,0 +1,19 @@
+{
+    "label": "Standard Product IFG Tagger",
+    "submission_type": "individual",
+    "params" : [
+    {
+      "name": "ifg_index",
+      "from": "dataset_jpath:_index",
+    },
+    {
+      "name": "orbitNumber",
+      "from": "dataset_jpath:_source.metadata.orbitNumber"
+    }
+    {
+      "name": "location",
+      "from": "submitter",
+      "from": "dataset_jpath:_source.location
+    }
+    ]
+}
