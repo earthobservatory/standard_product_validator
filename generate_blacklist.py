@@ -49,7 +49,7 @@ def determine_failed(missing, count_to_blacklist):
     mozart_url = '{0}/job_status-current/_search'.format(mozart_ip)
     es_query = {"query":{"bool":{"must":[{"term":{"status":"job-failed"}},{"term":{"job.job_info.job_payload.job_type":"job-sciflo-s1-ifg"}},{"range":{"job.retry_count":{"gte":count_to_blacklist}}}]}},"from":0,"size":1000}
     all_failed = query_es(mozart_url, es_query)
-    print('----------------------------------\nall failed jobs: {}i\n-------------------------------'.format(all_failed))
+    print('----------------------------------\nall failed jobs: {}\n-------------------------------'.format(all_failed))
     add_to_blacklist = []
     for ifg_cfg in missing:
         if is_in(ifg_cfg, all_failed):
