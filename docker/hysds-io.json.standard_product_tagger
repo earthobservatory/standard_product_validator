@@ -13,7 +13,7 @@
     {
       "name": "location",
       "from": "submitter",
-      "from": "dataset_jpath:_source.location
+      "from": "dataset_jpath:_source.location"
     }
     ]
 }
