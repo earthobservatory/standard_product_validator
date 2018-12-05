@@ -17,27 +17,34 @@ def main():
     #load context & get values
     ctx = load_context()
     coordinates = ctx.get('location')[0].get('coordinates')
-    ifg_index = ctx.get('ifg_index')
-    orbitNumber = ctx.get('orbitNumber')
+    ifg_index = ctx.get('ifg_index')[0]
+    orbitNumber = ctx.get('orbitNumber')[0]
+    print('orbitnumber: {}'.format(orbitNumber))
     #query AOIs over location
+    print('Retrieving AOI\'s over product extent...')
     aois = get_aois(coordinates)
-    print('found AOIs: {}'.format([x.get('_id') for x in aois]))
+    print('Found AOIs: {}'.format(', '.join([x.get('_id') for x in aois])))
     #for each AOI
     for aoi in aois:
         aoi_name = aoi['_id']
+        print('Retrieving products over {}...'.format(aoi_name))
         #query for ACQ-list
         acq_list = get_objects('acq-list', aoi, orbitNumber)
+        print('Found {} acquisition-list products.'.format(len(acq_list)))
         #query for IFG
         ifg_list = get_objects('ifg', aoi, orbitNumber, index=ifg_index)
+        print('Found {} ifg products.'.format(len(ifg_list)))
         #query for IFG blacklist products
         ifg_blacklist = get_objects('ifg-blacklist', aoi, orbitNumber)
+        print('Found {} blacklist products.'.format(len(ifg_blacklist)))
         #if any blacklist products match (list is empty)
+        print('Determining matching products...')
         matching_blacklist = return_matching(ifg_blacklist, acq_list)
         if not matching_blacklist:
             #tag all IFG products as <AOI_name>_invalid
             tag = '{0}_invalid'.format(aoi_name)
             tag_all(ifg_list, tag, ifg_index)
-        #if IFG match all ACQ-list
+        #if all of the ACQ-list are contained in the IFG products
         elif len(return_matching(ifg_list, acq_list)) == len(acq_list):
             #tag all <AOI_name>_validated
             tag = '{0}_validated'.format(aoi_name)
@@ -86,10 +93,14 @@ def get_objects(object_type, aoi, orbitNumber, index=None):
     starttime = aoi.get('_source', {}).get('starttime')
     endtime = aoi.get('_source', {}).get('endtime')
     location = aoi.get('_source', {}).get('location')
-    location['type'] = 'polygon'
+    #location['type'] = 'polygon'
     grq_ip = app.conf['GRQ_ES_URL'].replace(':9200', '').replace('http://', 'https://')
     grq_url = '{0}/es/{1}/_search'.format(grq_ip, idx)
-    grq_query = {"query":{"filtered":{"query":{"bool":{"must":[{"range":{"starttime":{"from":starttime, "to":endtime}}}, {"term":{"metadata.orbitNumber":orbitNumber}}]}}, "filter":{"geo_shape":{"location":location}}}}}
+    #grq_query = {"query":{"filtered":{"query":{"bool":{"must":[{"range":{"starttime":{"from":starttime, "to":endtime}}}, {"term":{"metadata.orbitNumber":orbitNumber}}]}}, "filter":{"geo_shape":{"location":location}}}}}
+    #grq_query = {"query":{"bool":{"must":[{"terms":{"metadata.orbitNumber":orbitNumber}},{"range":{"starttime":{"from":starttime, "to":endtime}}}]}},"from":0,"size":1}
+    #grq_query = {"query":{"bool":{"must":[{"terms":{"metadata.orbitNumber":orbitNumber}}, {"range":{"starttime":{"from":starttime, "to":endtime}}}]}},"filter":{"geo_shape":{"location":location}},"from":0,"size":100}
+    grq_query = {"query":{"bool":{"must":[{"terms":{"metadata.orbitNumber":orbitNumber}},{"range":{"starttime":{"from":starttime, "to":endtime}}}, {"geo_shape": {"location": location}}]}},"from":0,"size":100}
+
     results = query_es(grq_url, grq_query)
     return results
 
@@ -111,7 +122,7 @@ def query_es(grq_url, es_query):
         es_query['from'] = from_position
     #run the query and iterate until all the results have been returned
     print('querying: {}\n{}'.format(grq_url, json.dumps(es_query)))
-    response = requests.get(grq_url, data=json.dumps(es_query), verify=False)
+    response = requests.post(grq_url, data=json.dumps(es_query), verify=False)
     print('status code: {}'.format(response.status_code))
     #print('response text: {}'.format(response.text))
     response.raise_for_status()
@@ -121,7 +132,7 @@ def query_es(grq_url, es_query):
     for i in range(iterator_size, total_count, iterator_size):
         es_query['from'] = i
         print('querying: {}\n{}'.format(grq_url, json.dumps(es_query)))
-        response = requests.get(grq_url, data=json.dumps(es_query), timeout=60, verify=False)
+        response = requests.post(grq_url, data=json.dumps(es_query), timeout=60, verify=False)
         response.raise_for_status()
         results = json.loads(response.text, encoding='ascii')
         results_list.extend(results.get('hits', {}).get('hits', []))
