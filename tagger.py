@@ -174,7 +174,7 @@ def tag_all(object_list, tag, index):
         tags = obj.get('_source', {}).get('metadata', {}).get('tags', [])
         tags.append(tag)
         prod_type = obj['_type']
-        add_tags(index, obj['_id'], prod_type, tags)
+        add_tags(index, obj['_id'], prod_type, list(set(tags)))
         print('updated {} with tag: {}'.format(obj.get('_id'), tag))
 
 def add_tags(index, uid, prod_type, tags):
