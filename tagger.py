@@ -41,7 +41,7 @@ def main():
         #if any blacklist products match (list is empty)
         print('Determining matching products...')
         matching_blacklist = return_matching(ifg_blacklist, acq_list)
-        if not matching_blacklist:
+        if len(matching_blacklist) > 0:
             #tag all IFG products as <AOI_name>_invalid
             tag = '{0}_invalid'.format(aoi_name)
             tag_all(ifg_list, tag, ifg_index)
@@ -50,9 +50,9 @@ def main():
             #tag all <AOI_name>_validated
             tag = '{0}_validated'.format(aoi_name)
             tag_all(ifg_list, tag, ifg_index)
-        #else
+        else:
             #tag all <AOI_name>_in-progress (if not already)
-            tag = '{0}_in-progress'
+            tag = '{0}_in-progress'.format(aoi_name)
             tag_all(ifg_list, tag, ifg_index)
 
 def load_context():
