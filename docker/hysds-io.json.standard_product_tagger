@@ -1,6 +1,7 @@
 {
     "label": "Standard Product IFG Tagger",
     "submission_type": "individual",
+    "enable_dedup": false,
     "params" : [
     {
       "name": "ifg_index",
