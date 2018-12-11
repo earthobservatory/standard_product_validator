@@ -10,6 +10,7 @@ import hashlib
 import requests
 from hysds.celery import app
 import urllib3
+from collections import OrderedDict
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def main():
@@ -96,11 +97,7 @@ def get_objects(object_type, aoi, orbitNumber, index=None):
     #location['type'] = 'polygon'
     grq_ip = app.conf['GRQ_ES_URL'].replace(':9200', '').replace('http://', 'https://')
     grq_url = '{0}/es/{1}/_search'.format(grq_ip, idx)
-    #grq_query = {"query":{"filtered":{"query":{"bool":{"must":[{"range":{"starttime":{"from":starttime, "to":endtime}}}, {"term":{"metadata.orbitNumber":orbitNumber}}]}}, "filter":{"geo_shape":{"location":location}}}}}
-    #grq_query = {"query":{"bool":{"must":[{"terms":{"metadata.orbitNumber":orbitNumber}},{"range":{"starttime":{"from":starttime, "to":endtime}}}]}},"from":0,"size":1}
-    #grq_query = {"query":{"bool":{"must":[{"terms":{"metadata.orbitNumber":orbitNumber}}, {"range":{"starttime":{"from":starttime, "to":endtime}}}]}},"filter":{"geo_shape":{"location":location}},"from":0,"size":100}
-    grq_query = {"query":{"bool":{"must":[{"terms":{"metadata.orbitNumber":orbitNumber}},{"range":{"starttime":{"from":starttime, "to":endtime}}}, {"geo_shape": {"location": location}}]}},"from":0,"size":100}
-
+    grq_query = {"query":{"filtered":{"query":{"geo_shape":{"location": {"shape":location}}},"filter":{"bool":{"must":[{"term":{"metadata.orbitNumber":orbitNumber[0]}},{"term":{"metadata.orbitNumber":orbitNumber[1]}},{"range":{"starttime":{"from":starttime,"to":endtime}}}]}}}},"from":0,"size":100}
     results = query_es(grq_url, grq_query)
     return results
 
@@ -176,15 +173,16 @@ def tag_all(object_list, tag, index):
     for obj in object_list:
         tags = obj.get('_source', {}).get('metadata', {}).get('tags', [])
         tags.append(tag)
-        add_tags(index, obj['_id'], tags)
+        prod_type = obj['_type']
+        add_tags(index, obj['_id'], prod_type, tags)
         print('updated {} with tag: {}'.format(obj.get('_id'), tag))
 
-def add_tags(index, uid, tags):
+def add_tags(index, uid, prod_type, tags):
     '''updates the product with the given tag'''
-    grq_ip = app.conf['GRQ_ES_URL'].rstrip(':9200').replace('http://', 'https://')
-    grq_url = '{0}/{1}/{2}/_update'.format(grq_ip, index, uid)
+    grq_ip = app.conf['GRQ_ES_URL'].replace(':9200', '').replace('http://', 'https://')
+    grq_url = '{0}/es/{1}/{2}/{3}/_update'.format(grq_ip, index, prod_type, uid)    
     es_query = {"doc" : {"metadata": {"tags" : tags}}}
-    #print('querying {} with {}'.format(grq_url, es_query))
+    print('querying {} with {}'.format(grq_url, es_query))
     response = requests.post(grq_url, data=json.dumps(es_query), timeout=60, verify=False)
     response.raise_for_status()
 
