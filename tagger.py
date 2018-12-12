@@ -17,9 +17,9 @@ def main():
     '''main function, tags all appropriate ifgs using the given input ifg'''
     #load context & get values
     ctx = load_context()
-    coordinates = ctx.get('location')[0].get('coordinates')
-    ifg_index = ctx.get('ifg_index')[0]
-    orbitNumber = ctx.get('orbitNumber')[0]
+    coordinates = ctx.get('location').get('coordinates')
+    ifg_index = ctx.get('ifg_index')
+    orbitNumber = ctx.get('orbitNumber')
     print('orbitnumber: {}'.format(orbitNumber))
     #query AOIs over location
     print('Retrieving AOI\'s over product extent...')
