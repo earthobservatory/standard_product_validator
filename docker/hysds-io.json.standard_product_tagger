@@ -1,6 +1,6 @@
 {
     "label": "Standard Product IFG Tagger",
-    "submission_type": "individual",
+    "submission_type": "iteration",
     "enable_dedup": false,
     "params" : [
     {
