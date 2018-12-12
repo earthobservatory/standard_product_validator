@@ -8,8 +8,8 @@
       "from": "dataset_jpath:_index"
     },
     {
-      "name": "orbitNumber",
-      "from": "dataset_jpath:_source.metadata.orbitNumber"
+      "name": "orbit_number",
+      "from": "dataset_jpath:_source.metadata.orbit_number"
     },
     {
       "name": "location",
