@@ -45,8 +45,8 @@ def main():
             #tag all IFG products as <AOI_name>_invalid
             tag = '{0}_invalid'.format(aoi_name)
             tag_all(ifg_list, tag, ifg_index)
-        #if all of the ACQ-list are contained in the IFG products
         elif len(return_matching(ifg_list, acq_list)) == len(acq_list):
+            #if all of the ACQ-list are contained in the IFG products
             #tag all <AOI_name>_validated
             tag = '{0}_validated'.format(aoi_name)
             tag_all(ifg_list, tag, ifg_index)
