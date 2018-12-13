@@ -1,6 +1,7 @@
 {
     "label": "Standard Product IFG Tagger",
-    "submission_type": "individual",
+    "submission_type": "iteration",
+    "enable_dedup": false,
     "params" : [
     {
       "name": "ifg_index",
@@ -8,7 +9,7 @@
     },
     {
       "name": "orbitNumber",
-      "from": "dataset_jpath:_source.metadata.orbitNumber"
+      "from": "dataset_jpath:_source.metadata.orbit_number"
     },
     {
       "name": "location",

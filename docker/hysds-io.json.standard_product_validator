@@ -1,6 +1,7 @@
 {
     "label": "Standard Product IFG Validator",
     "submission_type": "individual",
+    "enable_dedup": false,
     "params" : [
     {
       "name": "ifg_config_version",

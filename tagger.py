@@ -17,9 +17,9 @@ def main():
     '''main function, tags all appropriate ifgs using the given input ifg'''
     #load context & get values
     ctx = load_context()
-    coordinates = ctx.get('location')[0].get('coordinates')
-    ifg_index = ctx.get('ifg_index')[0]
-    orbitNumber = ctx.get('orbitNumber')[0]
+    coordinates = ctx.get('location').get('coordinates')
+    ifg_index = ctx.get('ifg_index')
+    orbitNumber = ctx.get('orbitNumber')
     print('orbitnumber: {}'.format(orbitNumber))
     #query AOIs over location
     print('Retrieving AOI\'s over product extent...')
@@ -46,17 +46,25 @@ def main():
         matching_blacklist = return_matching(ifg_blacklist, acq_list)
         if len(matching_blacklist) > 0:
             #tag all IFG products as <AOI_name>_invalid
+            print('Found matching blacklist products. Tagging as invalid.')
             tag = '{0}_invalid'.format(aoi_name)
-            tag_all(ifg_list, tag, ifg_index)
-        #if all of the ACQ-list are contained in the IFG products
-        elif len(return_matching(ifg_list, acq_list)) == len(acq_list):
+            tag_all(ifg_list, tag, ifg_index, aoi_name)
+        elif contains(ifg_list, acq_list):
+            #if all of the ACQ-list are contained in the IFG products
             #tag all <AOI_name>_validated
+            print('All input acq-lists are contained by the ifg products. Tagging as validated')
             tag = '{0}_validated'.format(aoi_name)
-            tag_all(ifg_list, tag, ifg_index)
+            tag_all(ifg_list, tag, ifg_index, aoi_name)
         else:
             #tag all <AOI_name>_in-progress (if not already)
+            print('Missing ifg products from acq-lists. Tagging as in-progress')
+            print('Missing acq-list Products:\n------------------')
+            missing = return_missing(ifg_list, acq_list)
+            ids = [x['_id'] for x in missing]
+            for i in ids:
+                print(i)
             tag = '{0}_in-progress'.format(aoi_name)
-            tag_all(ifg_list, tag, ifg_index)
+            tag_all(ifg_list, tag, ifg_index, aoi_name)
 
 def load_context():
     '''loads the context file into a dict'''
@@ -101,6 +109,9 @@ def get_objects(object_type, aoi, orbitNumber, index=None):
     grq_ip = app.conf['GRQ_ES_URL'].replace(':9200', '').replace('http://', 'https://')
     grq_url = '{0}/es/{1}/_search'.format(grq_ip, idx)
     grq_query = {"query":{"filtered":{"query":{"geo_shape":{"location": {"shape":location}}},"filter":{"bool":{"must":[{"term":{"metadata.orbitNumber":orbitNumber[0]}},{"term":{"metadata.orbitNumber":orbitNumber[1]}},{"range":{"starttime":{"from":starttime,"to":endtime}}}]}}}},"from":0,"size":100}
+    if object_type == 'ifg':
+        #orbitNumber has been updated to orbit_number in ifg metadata
+        grq_query = {"query":{"filtered":{"query":{"geo_shape":{"location": {"shape":location}}},"filter":{"bool":{"must":[{"term":{"metadata.orbit_number":orbitNumber[0]}},{"term":{"metadata.orbit_number":orbitNumber[1]}},{"range":{"starttime":{"from":starttime,"to":endtime}}}]}}}},"from":0,"size":100}
     results = query_es(grq_url, grq_query)
     return results
 
@@ -121,9 +132,9 @@ def query_es(grq_url, es_query):
         from_position = 0
         es_query['from'] = from_position
     #run the query and iterate until all the results have been returned
-    print('querying: {}\n{}'.format(grq_url, json.dumps(es_query)))
+    #print('querying: {}\n{}'.format(grq_url, json.dumps(es_query)))
     response = requests.post(grq_url, data=json.dumps(es_query), verify=False)
-    print('status code: {}'.format(response.status_code))
+    #print('status code: {}'.format(response.status_code))
     #print('response text: {}'.format(response.text))
     response.raise_for_status()
     results = json.loads(response.text, encoding='ascii')
@@ -131,7 +142,7 @@ def query_es(grq_url, es_query):
     total_count = results.get('hits', {}).get('total', 0)
     for i in range(iterator_size, total_count, iterator_size):
         es_query['from'] = i
-        print('querying: {}\n{}'.format(grq_url, json.dumps(es_query)))
+        #print('querying: {}\n{}'.format(grq_url, json.dumps(es_query)))
         response = requests.post(grq_url, data=json.dumps(es_query), timeout=60, verify=False)
         response.raise_for_status()
         results = json.loads(response.text, encoding='ascii')
@@ -143,6 +154,26 @@ def are_match(es_object1, es_object2):
     if gen_hash(es_object1) == gen_hash(es_object2):
         return True
     return False
+
+def contains(list1, list2):
+    '''returns True if list1 contains all products in list2. False otherwise'''
+    hashlist1 = build_hashed_dict(list1)
+    hashlist2 = build_hashed_dict(list2)
+    for key in hashlist2.keys():
+        if hashlist1.get(key, False) is False:
+            return False
+    return True
+
+def return_missing(list1, list2):
+    '''returns the products in list2 that are NOT contained by list1'''
+    missing = []
+    hashlist1 = build_hashed_dict(list1)
+    hashlist2 = build_hashed_dict(list2)
+    for key in hashlist2.keys():
+        obj = hashlist1.get(key)
+        if obj is None:
+            missing.append(hashlist2[key])
+    return missing
 
 def return_matching(list1, list2):
     '''returns a list of matching objects between the two lists'''
@@ -167,17 +198,28 @@ def build_hashed_dict(object_list):
 
 def gen_hash(es_object):
     '''Generates a hash from the master and slave scene list'''
-    master = pickle.dumps(sorted(es_object['_source']['metadata']['master_scenes']))
-    slave = pickle.dumps(sorted(es_object['_source']['metadata']['slave_scenes']))
+    #master = pickle.dumps(sorted(es_object['_source']['metadata']['master_scenes']))
+    #slave = pickle.dumps(sorted(es_object['_source']['metadata']['slave_scenes']))
+    #return '{}_{}'.format(hashlib.md5(master).hexdigest(), hashlib.md5(slave).hexdigest())
+    met = es_object.get('_source', {}).get('metadata', {})
+    master = [x.replace('acquisition-', '') for x in met.get('master_scenes', [])]
+    slave = [x.replace('acquisition-', '') for x in met.get('slave_scenes', [])]
+    master = pickle.dumps(sorted(master))
+    slave = pickle.dumps(sorted(slave))
     return '{}_{}'.format(hashlib.md5(master).hexdigest(), hashlib.md5(slave).hexdigest())
 
-def tag_all(object_list, tag, index):
+
+
+def tag_all(object_list, tag, index, aoi_name):
     '''tags all objects in object list with the given tag'''
     for obj in object_list:
         tags = get_current_tags(obj) #gets the current tags from es. this is needed bc we do mulitple updates
+        #remove any that might be already tagged
+        remove_tags = ['{0}_in-progress'.format(aoi_name), '{0}_validated'.format(aoi_name), '{0}_invalid'.format(aoi_name)]
+        tags = [x for x in tags if x not in remove_tags]
         tags.append(tag)
         prod_type = obj['_type']
-        add_tags(index, obj['_id'], prod_type, tags)
+        add_tags(index, obj['_id'], prod_type, list(set(tags)))
         print('updated {} with tag: {}'.format(obj.get('_id'), tag))
 
 def add_tags(index, uid, prod_type, tags):
@@ -185,7 +227,7 @@ def add_tags(index, uid, prod_type, tags):
     grq_ip = app.conf['GRQ_ES_URL'].replace(':9200', '').replace('http://', 'https://')
     grq_url = '{0}/es/{1}/{2}/{3}/_update'.format(grq_ip, index, prod_type, uid)    
     es_query = {"doc" : {"metadata": {"tags" : tags}}}
-    print('querying {} with {}'.format(grq_url, es_query))
+    #print('querying {} with {}'.format(grq_url, es_query))
     response = requests.post(grq_url, data=json.dumps(es_query), timeout=60, verify=False)
     response.raise_for_status()
 
