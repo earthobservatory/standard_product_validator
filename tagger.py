@@ -238,9 +238,10 @@ def get_current_tags(obj):
     index = obj.get('_index')
     grq_ip = app.conf['GRQ_ES_URL'].replace(':9200', '').replace('http://', 'https://')
     grq_url = '{0}/es/{1}/{2}/{3}/_search'.format(grq_ip, index, prod_type, uid)
-    es_query = {"query": {"match_all": {}}}
+    grq_query = {"query": {"match_all": {}}}
     results = query_es(grq_url, grq_query)
     tags = results[0].get('_source', {}).get('metadata', {}).get('tags', [])
+    print('current tags: {}'.format(tags))
     return tags
 
 
