@@ -28,10 +28,13 @@ def main():
     #for each AOI
     for aoi in aois:
         aoi_name = aoi['_id']
-        print('Retrieving products over {}...'.format(aoi_name))
+        print('\nRetrieving products over {}...\n-----------------------'.format(aoi_name))
         #query for ACQ-list
         acq_list = get_objects('acq-list', aoi, orbitNumber)
         print('Found {} acquisition-list products.'.format(len(acq_list)))
+        if len(acq_list) == 0:
+            print('Since 0 acq-list products have been found, ending AOI tagging.')
+            continue
         #query for IFG
         ifg_list = get_objects('ifg', aoi, orbitNumber, index=ifg_index)
         print('Found {} ifg products.'.format(len(ifg_list)))
@@ -171,7 +174,7 @@ def gen_hash(es_object):
 def tag_all(object_list, tag, index):
     '''tags all objects in object list with the given tag'''
     for obj in object_list:
-        tags = obj.get('_source', {}).get('metadata', {}).get('tags', [])
+        tags = get_current_tags(obj) #gets the current tags from es. this is needed bc we do mulitple updates
         tags.append(tag)
         prod_type = obj['_type']
         add_tags(index, obj['_id'], prod_type, tags)
@@ -185,6 +188,19 @@ def add_tags(index, uid, prod_type, tags):
     print('querying {} with {}'.format(grq_url, es_query))
     response = requests.post(grq_url, data=json.dumps(es_query), timeout=60, verify=False)
     response.raise_for_status()
+
+def get_current_tags(obj):
+    '''gets the current tags of the object'''
+    uid = obj.get('_id')
+    prod_type = obj.get('_type')
+    index = obj.get('_index')
+    grq_ip = app.conf['GRQ_ES_URL'].replace(':9200', '').replace('http://', 'https://')
+    grq_url = '{0}/es/{1}/{2}/{3}/_search'.format(grq_ip, index, prod_type, uid)
+    es_query = {"query": {"match_all": {}}}
+    results = query_es(grq_url, grq_query)
+    tags = results[0].get('_source', {}).get('metadata', {}).get('tags', [])
+    return tags
+
 
 if __name__ == '__main__':
     main()
