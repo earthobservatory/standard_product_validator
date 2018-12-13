@@ -98,6 +98,9 @@ def get_objects(object_type, aoi, orbitNumber, index=None):
     grq_ip = app.conf['GRQ_ES_URL'].replace(':9200', '').replace('http://', 'https://')
     grq_url = '{0}/es/{1}/_search'.format(grq_ip, idx)
     grq_query = {"query":{"filtered":{"query":{"geo_shape":{"location": {"shape":location}}},"filter":{"bool":{"must":[{"term":{"metadata.orbitNumber":orbitNumber[0]}},{"term":{"metadata.orbitNumber":orbitNumber[1]}},{"range":{"starttime":{"from":starttime,"to":endtime}}}]}}}},"from":0,"size":100}
+    if index == 'ifg':
+        #orbitNumber has been updated to orbit_number in ifg metadata
+        grq_query = {"query":{"filtered":{"query":{"geo_shape":{"location": {"shape":location}}},"filter":{"bool":{"must":[{"term":{"metadata.orbitNumber":orbit_number[0]}},{"term":{"metadata.orbit_number":orbitNumber[1]}},{"range":{"starttime":{"from":starttime,"to":endtime}}}]}}}},"from":0,"size":100}
     results = query_es(grq_url, grq_query)
     return results
 
