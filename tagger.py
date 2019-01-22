@@ -211,7 +211,7 @@ def gen_hash(es_object):
 
 def get_starttime(input_string):
     '''returns the starttime from the input string. Used for comparison of acquisition ids to SLC ids'''
-    st_regex = '[(1-2][0-9]{7}T[0-2][0-9][0-6][0-9][0-6][0-9])'
+    st_regex = '([1-2][0-9]{7}T[0-2][0-9][0-6][0-9][0-6][0-9])'
     result = re.search(st_regex, input_string)
     try:
         starttime = result.group(0)
