@@ -4,6 +4,7 @@
 Tags standard product, and co-located products, as validated/invalid/in-progress
 '''
 
+import re
 import json
 import pickle
 import hashlib
@@ -202,13 +203,21 @@ def gen_hash(es_object):
     #slave = pickle.dumps(sorted(es_object['_source']['metadata']['slave_scenes']))
     #return '{}_{}'.format(hashlib.md5(master).hexdigest(), hashlib.md5(slave).hexdigest())
     met = es_object.get('_source', {}).get('metadata', {})
-    master = [x.replace('acquisition-', '') for x in met.get('master_scenes', [])]
-    slave = [x.replace('acquisition-', '') for x in met.get('slave_scenes', [])]
+    master = [get_starttime(x) for x in met.get('master_scenes', [])]
+    slave = [get_starttime(x) for x in met.get('slave_scenes', [])]
     master = pickle.dumps(sorted(master))
     slave = pickle.dumps(sorted(slave))
     return '{}_{}'.format(hashlib.md5(master).hexdigest(), hashlib.md5(slave).hexdigest())
 
-
+def get_starttime(input_string):
+    '''returns the starttime from the input string. Used for comparison of acquisition ids to SLC ids'''
+    st_regex = '[(1-2][0-9]{7}T[0-2][0-9][0-6][0-9][0-6][0-9])'
+    result = re.search(st_regex, input_string)
+    try:
+        starttime = result.group(0)
+        return starttime
+    except Exception, err:
+        raise Exception('input product: {} does not match regex:{}. Cannot compare SLCs to acquisition ids.'.format(input_string, st_regex))
 
 def tag_all(object_list, tag, index, aoi_name):
     '''tags all objects in object list with the given tag'''
