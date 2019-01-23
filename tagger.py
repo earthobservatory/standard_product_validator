@@ -21,10 +21,14 @@ def main():
     coordinates = ctx.get('location').get('coordinates')
     ifg_index = ctx.get('ifg_index')
     orbitNumber = ctx.get('orbitNumber')
+    aoi_name = ctx.get('AOI', False)
     print('orbitnumber: {}'.format(orbitNumber))
     #query AOIs over location
     print('Retrieving AOI\'s over product extent...')
     aois = get_aois(coordinates)
+    if aoi_name:
+        print('Enumerating over AOI {} only.'.format(aoi_name))
+        aois = [x for x in aois if x.get('_id', '') == aoi_name] #filter out other AOIs
     print('Found AOIs: {}'.format(', '.join([x.get('_id') for x in aois])))
     #for each AOI
     for aoi in aois:

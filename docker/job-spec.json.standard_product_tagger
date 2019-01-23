@@ -20,6 +20,10 @@
   {
     "name": "location",
     "destination": "context"
+  },
+  {
+    "name": "AOI",
+    "destination": "context"
   }
   ]
 }

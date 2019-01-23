@@ -13,8 +13,13 @@
     },
     {
       "name": "location",
-      "from": "submitter",
       "from": "dataset_jpath:_source.location"
+    },
+    {
+      "name": "AOI",
+      "from": "submitter",
+      "type": "text",
+      "optional": true
     }
     ]
 }
