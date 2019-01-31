@@ -7,8 +7,8 @@ Queries ES for ifg config files. Determines if products
 '''
 
 from __future__ import print_function
+import re
 import json
-import pprint
 import pickle
 import hashlib
 import requests
@@ -77,10 +77,10 @@ def determine_missing_ifgs(acq_lists, ifgs, blacklist):
     Determines the ifgs that have not been produced from the acquisition lists.
     '''
     missing = []
-    for key in ifg_configs.keys():   
+    for key in acq_lists.keys():   
         print('checking for: {}'.format(key))
         if not key in ifgs and not key in blacklist:
-            missing.append(ifg_configs[key])
+            missing.append(acq_lists[key])
     return missing
 
 def build_hashed_dict(object_list):
@@ -110,7 +110,7 @@ def get_starttime(input_string):
         starttime = result.group(0)
         return starttime
     except Exception, err:
-        raise Exception('input product: {} does not match regex:{}. Cannot compare SLCs to acquisition ids.'.format(input_string, st_regex))
+        raise Exception('input product: {} does not match regex:{}. Cannot compare SLCs to acquisition ids. {}'.format(input_string, st_regex, err))
 
 def get_ifgs():
     '''
@@ -121,7 +121,7 @@ def get_ifgs():
     es_query = {"query":{"bool":{"must":[{"match_all":{}}]}}, "from":0, "size":1000}
     return query_es(grq_url, es_query)
 
-def get_acq_lists(ifg_version):
+def get_acq_lists(acq_version):
     '''Returns all acquisition-list products on ES matching the ifg_version'''
     grq_ip = app.conf['GRQ_ES_URL'].rstrip(':9200').replace('http://', 'https://')
     grq_url = '{0}/es/grq_{1}_acq-list/_search'.format(grq_ip, acq_version)
