@@ -26,41 +26,41 @@ def main():
     '''
     print('Determining variables & ES products...')
     ctx = load_context()
-    ifg_version = ctx['ifg_config_version']
+    acq_list_version = ctx['acquisition_list_version']
     count_to_blacklist = ctx['blacklist_at_failure_count']
-    ifg_configs = build_hashed_dict(get_ifg_configs(ifg_version))
+    acq_lists = build_hashed_dict(get_acq_lists(acq_list_version))
     ifgs = build_hashed_dict(get_ifgs())
     blacklist = build_hashed_dict(get_blacklist())
-    print('Found {} ifg-cfgs, {} ifgs, and {} blacklist products.'.format(len(ifg_configs.keys()), len(ifgs.keys()), len(blacklist.keys())))
+    print('Found {} acq-lists, {} ifgs, and {} blacklist products.'.format(len(acq_lists.keys()), len(ifgs.keys()), len(blacklist.keys())))
     print('Determining missing IFGs...')
-    missing = determine_missing_ifgs(ifg_configs, ifgs, blacklist)
+    missing = determine_missing_ifgs(acq_lists, ifgs, blacklist)
     print('Found {} missing IFGs. Checking jobs.'.format(len(missing)))
-    add_to_blacklist = determine_failed(missing, count_to_blacklist)
+    add_to_blacklist = determine_failed(missing, count_to_blacklist) #returns a list of acq-list objects that are associated with failed jobs
     print('{} jobs have failed {} times or more. Adding each as a blacklist product...'.format(len(add_to_blacklist), count_to_blacklist))
     for item in add_to_blacklist:
         build_blacklist_product.build(item)
 
 def determine_failed(missing, count_to_blacklist):
     '''
-    Determines which ifg-cfg products, which have been filtered by the current
+    Determines which acq-list products, which have been filtered by the current
     blacklist, have failed more than count_to_blacklist times. Returns those
-    ifg-cfg products. Param missing is the ifg-cfg ES object list.
+    acq-list products. Param missing is the acq-list ES object list.
     '''
     mozart_ip = app.conf['JOBS_ES_URL'].replace('https://', 'http://').rstrip('/')
     mozart_url = '{0}/job_status-current/_search'.format(mozart_ip)
 
     #es_query = {"query":{"bool":{"must":[{"term":{"status":"job-failed"}},{"term":{"job.job_info.job_payload.job_type":"job-sciflo-s1-ifg"}},{"range":{"job.retry_count":{"gte":count_to_blacklist}}}]}},"from":0,"size":1000}
     if count_to_blacklist > 0:
-        es_query = {"query":{"bool":{"must":[{"term":{"status":"job-failed"}},{"term":{"job.job_info.job_payload.job_type":"job:sentinel_ifg-singlescene"}},{"range":{"job.retry_count":{"gte":count_to_blacklist}}}]}},"from":0,"size":1000}
+        es_query = {"query":{"bool":{"must":[{"term":{"status":"job-failed"}},{"term":{"job.job_info.job_payload.job_type":"standard_product-s1gunw-topsapp"}},{"range":{"job.retry_count":{"gte":count_to_blacklist}}}]}},"from":0,"size":1000}
     else:
-        es_query = {"query":{"bool":{"must":[{"term":{"job.job_info.job_payload.job_type":"job:sentinel_ifg-singlescene"}},{"term":{"status":"job-failed"}}],"must_not":[],"should":[]}},"from":0,"size":1000,"sort":[],"aggs":{}}
+        es_query = {"query":{"bool":{"must":[{"term":{"job.job_info.job_payload.job_type":"standard_product-s1gunw-topsapp"}},{"term":{"status":"job-failed"}}],"must_not":[],"should":[]}},"from":0,"size":1000,"sort":[],"aggs":{}}
     all_failed = query_es(mozart_url, es_query)
     print('----------------------------------\nall failed jobs: {}\n-------------------------------'.format(all_failed))
     all_failed_dict = build_hashed_dict(all_failed)
     add_to_blacklist = []
-    for ifg_cfg in missing:
-        if is_in(ifg_cfg, all_failed_dict):
-            add_to_blacklist.append(ifg_cfg)
+    for acq_list in missing:
+        if is_in(acq_list, all_failed_dict):
+            add_to_blacklist.append(acq_list)
     return add_to_blacklist
 
 def is_in(ifg_cfg, all_failed_dict):
@@ -72,9 +72,9 @@ def is_in(ifg_cfg, all_failed_dict):
         return True
     return False
 
-def determine_missing_ifgs(ifg_configs, ifgs, blacklist):
+def determine_missing_ifgs(acq_lists, ifgs, blacklist):
     '''
-    Determines the ifgs that have not been produced from the ifg configs.
+    Determines the ifgs that have not been produced from the acquisition lists.
     '''
     missing = []
     for key in ifg_configs.keys():   
@@ -94,26 +94,23 @@ def build_hashed_dict(object_list):
     return hashed_dict
 
 def gen_hash(es_object):
-    '''Generates a hash from the master and slave scene list''' 
-    met = es_object.get('_source', {}).get('metadata')
-    if met is None:
-        met = es_object.get('_source', {}).get('context')
-    if met is None:
-        met = es_object.get('job', {}).get('params') 
-    #if met is None:
-    #    pp = pprint.PrettyPrinter(depth=6)
-    #    pp.pprint(es_object)
-    #    raise Exception('invalid met.')
-    if 'master_scenes' in met.keys():
-        master = [x.replace('acquisition-', '') for x in met['master_scenes']]
-        slave = [x.replace('acquisition-', '') for x in met['slave_scenes']]
-        master = pickle.dumps(sorted(master))
-        slave = pickle.dumps(sorted(slave))
-        return '{}_{}'.format(hashlib.md5(master).hexdigest(), hashlib.md5(slave).hexdigest())
-    #else:
-    #    master = pickle.dumps(sorted(met['master_ids'].split(',')))
-    #    slave = pickle.dumps(sorted(met['slave_ids'].split(',')))
-    #    return '{}_{}'.format(hashlib.md5(master).hexdigest(), hashlib.md5(slave).hexdigest())
+    '''Generates a hash from the master and slave scene list'''
+    met = es_object.get('_source', {}).get('metadata', {})
+    master = [get_starttime(x) for x in met.get('master_scenes', [])]
+    slave = [get_starttime(x) for x in met.get('slave_scenes', [])]
+    master = pickle.dumps(sorted(master))
+    slave = pickle.dumps(sorted(slave))
+    return '{}_{}'.format(hashlib.md5(master).hexdigest(), hashlib.md5(slave).hexdigest())
+
+def get_starttime(input_string):
+    '''returns the starttime from the input string. Used for comparison of acquisition ids to SLC ids'''
+    st_regex = '([1-2][0-9]{7}T[0-2][0-9][0-6][0-9][0-6][0-9])'
+    result = re.search(st_regex, input_string)
+    try:
+        starttime = result.group(0)
+        return starttime
+    except Exception, err:
+        raise Exception('input product: {} does not match regex:{}. Cannot compare SLCs to acquisition ids.'.format(input_string, st_regex))
 
 def get_ifgs():
     '''
@@ -124,10 +121,10 @@ def get_ifgs():
     es_query = {"query":{"bool":{"must":[{"match_all":{}}]}}, "from":0, "size":1000}
     return query_es(grq_url, es_query)
 
-def get_ifg_configs(ifg_version):
-    '''Returns all ifg_config products on ES matching the ifg_version'''
+def get_acq_lists(ifg_version):
+    '''Returns all acquisition-list products on ES matching the ifg_version'''
     grq_ip = app.conf['GRQ_ES_URL'].rstrip(':9200').replace('http://', 'https://')
-    grq_url = '{0}/es/grq_{1}_ifg-cfg/_search'.format(grq_ip, ifg_version)
+    grq_url = '{0}/es/grq_{1}_acq-list/_search'.format(grq_ip, acq_version)
     es_query = {"query":{"bool":{"must":[{"match_all":{}}]}}, "from":0, "size":1000}
     return query_es(grq_url, es_query)
 

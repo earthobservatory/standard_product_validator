@@ -4,7 +4,7 @@
     "enable_dedup": false,
     "params" : [
     {
-      "name": "ifg_config_version",
+      "name": "acquisition_list_version",
       "from": "submitter",
       "type": "text",
       "default": "v2.0.0"
