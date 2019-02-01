@@ -54,7 +54,7 @@ if __name__ == "__main__":
     parser.add_argument('-p', '--params', help='Input params dict', dest='params', required=True)
     parser.add_argument('-v', '--version', help='release version, eg "master" or "release-20180615"', dest='version', required=False, default='master')
     parser.add_argument('-q', '--queue', help='Job queue', dest='queue', required=False, default='factotum-job_worker-small')
-    parser.add_argument('-p', '--priority', help='Job priority', dest='priority', required=False, default='5')
+    parser.add_argument('-i', '--priority', help='Job priority', dest='priority', required=False, default='5')
     parser.add_argument('-g', '--tags', help='Job tags. Use a comma separated list for more than one', dest='tags', required=False, default='neic_event_aoi')
     args = parser.parse_args()
     main(args.job_name, args.params, args.version, args.queue, args.priority, args.tags)
