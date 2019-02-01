@@ -117,7 +117,7 @@ def get_ifgs():
     Returns all ifg products on ES
     '''
     grq_ip = app.conf['GRQ_ES_URL'].rstrip(':9200').replace('http://', 'https://')
-    grq_url = '{0}/es/grq_*_s1-gunw-standard-product/_search'.format(grq_ip)
+    grq_url = '{0}/es/grq_*_s1-gunw/_search'.format(grq_ip)
     es_query = {"query":{"bool":{"must":[{"match_all":{}}]}}, "from":0, "size":1000}
     return query_es(grq_url, es_query)
 

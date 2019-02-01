@@ -105,7 +105,7 @@ def get_objects(object_type, aoi, orbitNumber, index=None):
     if index is not None:
         idx = index
     else:
-        idx_dct = {'ifg':'grq_*s1-gunw-standard-product', 'acq-list':'grq_*_acq-list', 'ifg-blacklist':'grq_*_blacklist'}
+        idx_dct = {'ifg':'grq_*s1-gunw', 'acq-list':'grq_*_acq-list', 'ifg-blacklist':'grq_*_blacklist'}
         idx = idx_dct.get(object_type)
     starttime = aoi.get('_source', {}).get('starttime')
     endtime = aoi.get('_source', {}).get('endtime')
