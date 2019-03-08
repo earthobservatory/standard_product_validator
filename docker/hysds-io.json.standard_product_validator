@@ -1,5 +1,5 @@
 {
-    "label": "Standard Product IFG Validator",
+    "label": "Standard Product S1-GUNW - Evaluate for Blacklist",
     "submission_type": "individual",
     "enable_dedup": false,
     "params" : [
