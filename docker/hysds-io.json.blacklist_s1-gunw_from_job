@@ -20,12 +20,12 @@
     },
     {
       "name": "master_slcs",
-      "from": "dataset_jpath:job.context.master_ids",
+      "from": "dataset_jpath:_source.job.context.master_ids",
       "type": "text"
     },
     { 
       "name": "slave_slcs",
-      "from": "dataset_jpath:job.context.slave_ids",
+      "from": "dataset_jpath:_source.job.context.slave_ids",
       "type": "text"
     }
     ]
