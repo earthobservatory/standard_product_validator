@@ -1,0 +1,29 @@
+{
+  "command":"/home/ops/verdi/ops/standard_product_validator/generate_blacklist_from_job.py",
+  "imported_worker_files": {
+    "/home/ops/.netrc": "/home/ops/.netrc",
+    "/home/ops/.aws": "/home/ops/.aws"
+  },
+  "disk_usage":"2GB",
+  "recommended-queues": ["factotum-job_worker-small"],
+  "soft_time_limit": 2000,
+  "time_limit": 2800,
+  "params" : [
+  {
+    "name": "required_retry_count",
+    "destination": "context"
+  },
+  {
+    "name": "current_retry_count",
+    "destination": "context"
+  },
+  { 
+    "name": "master_slcs",
+    "destination": "context"
+  },
+  { 
+    "name": "slave_slcs",
+    "destination": "context"
+  }
+  ]
+}

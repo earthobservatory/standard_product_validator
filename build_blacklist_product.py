@@ -13,7 +13,7 @@ from hysds.celery import app
 from hysds.dataset_ingest import ingest
 
 VERSION = 'v1.0'
-PRODUCT_PREFIX = 'S1-ifg-cfg-blacklist'
+PRODUCT_PREFIX = 's1-gunw-ifg-blacklist'
 
 
 def build(ifg_cfg):
@@ -29,6 +29,9 @@ def build(ifg_cfg):
     print('    location:       {0}'.format(ds['location']))
     print('    master_scenes:  {0}'.format(met['master_scenes']))
     print('    slave_scenes:   {0}'.format(met['slave_scenes']))
+    print('    master_slcs:    {0}'.format(met.get('master_slcs', False)))
+    print('    slave_slcs:     {0}'.format(met.get('slave_slcs', False)))
+
 
 def build_id(s1_ifg):
     global VERSION
@@ -57,8 +60,15 @@ def build_met(ifg_cfg):
     '''Generates the met dict for the ifg-cfg-blacklist from an ifg-cfg'''
     master_list = ifg_cfg['_source']['metadata']['master_scenes']
     slave_list = ifg_cfg['_source']['metadata']['slave_scenes']
-    track = ifg_cfg['_source']['metadata']['track']
-    met = {'master_scenes': master_list, 'slave_scenes': slave_list, 'track': track}
+    master_slcs = ifg_cfg['_source']['metadata']['master_slcs']
+    slave_slcs = ifg_cfg['_source']['metadata']['slave_slcs']
+    track = ifg_cfg['_source']['metadata'].get('track_number', False)
+    if track is False:
+        track = ifg_cfg['_source']['metadata'].get('track', False)
+    master_orbit_file = ifg_cfg['_source']['metadata'].get('master_orbit_file', False)
+    slave_orbit_file = ifg_cfg['_source']['metadata'].get('slave_orbit_file', False)
+    met = {'master_scenes': master_list, 'slave_scenes': slave_list, 'master_slcs': master_slcs, 'slave_slcs': slave_slcs,
+           'master_orbit_file': master_orbit_file, 'slave_orbit_file': slave_orbit_file, 'track_number': track}
     return met
 
 def build_product_dir(ds, met):

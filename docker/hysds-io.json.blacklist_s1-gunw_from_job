@@ -1,0 +1,32 @@
+{
+    "label": "Standard Product S1-GUNW - Blacklist S1-GUNW from topsapp job",
+    "component":"mozart",
+    "submission_type": "individual",
+    "enable_dedup": false,
+    "params" : [
+    {
+      "name": "required_retry_count",
+      "from": "submitter",
+      "type": "number",
+      "lambda": "lambda x: int(x)",
+      "default": "0",
+      "optional": true
+    },
+    {
+      "name": "current_retry_count",
+      "from": "dataset_jpath:job",
+      "type": "text",
+      "lambda": "lambda x: x.get('retry_count', 0)"
+    },
+    {
+      "name": "master_slcs",
+      "from": "dataset_jpath:job.context.master_ids",
+      "type": "text"
+    },
+    { 
+      "name": "slave_slcs",
+      "from": "dataset_jpath:job.context.slave_ids",
+      "type": "text"
+    }
+    ]
+}

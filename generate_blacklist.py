@@ -14,8 +14,6 @@ import hashlib
 import requests
 from hysds.celery import app
 import build_blacklist_product
-#from requests.auth import HTTPBasicAuth
-#from hysds_commons.net_utils import get_container_host_ip
 
 def main():
     '''
