@@ -47,7 +47,7 @@ def get_ifg_cfg(master_slcs, slave_slcs):
     #build es query
     master_term = ','.join([json.dumps({"term":{"metadata.master_slcs.raw": x}}) for x in master_slcs])
     slave_term = ','.join([json.dumps({"term":{"metadata.slave_slcs.raw": x}}) for x in slave_slcs])
-    es_query = '{"query":{"bool":{"must":[' + master_term + ',' + slave_term + ']}},"from":0,"size":10}'
+    es_query = json.loads('{"query":{"bool":{"must":[' + master_term + ',' + slave_term + ']}},"from":0,"size":10}')
     results = query_es(grq_url, es_query)
     return results[0]
 
