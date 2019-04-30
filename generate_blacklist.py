@@ -114,21 +114,21 @@ def get_ifgs():
     '''
     Returns all ifg products on ES
     '''
-    grq_ip = app.conf['GRQ_ES_URL'].rstrip(':9200').replace('http://', 'https://')
+    grq_ip = app.conf['GRQ_ES_URL'].replace(':9200', '').replace('http://', 'https://')
     grq_url = '{0}/es/grq_*_s1-gunw/_search'.format(grq_ip)
     es_query = {"query":{"bool":{"must":[{"match_all":{}}]}}, "from":0, "size":1000}
     return query_es(grq_url, es_query)
 
 def get_acq_lists(acq_version):
     '''Returns all acquisition-list products on ES matching the ifg_version'''
-    grq_ip = app.conf['GRQ_ES_URL'].rstrip(':9200').replace('http://', 'https://')
+    grq_ip = app.conf['GRQ_ES_URL'].replace(':9200', '').replace('http://', 'https://')
     grq_url = '{0}/es/grq_{1}_s1-gunw-acq-list/_search'.format(grq_ip, acq_version)
     es_query = {"query":{"bool":{"must":[{"match_all":{}}]}}, "from":0, "size":1000}
     return query_es(grq_url, es_query)
 
 def get_blacklist():
     '''Returns all blacklist products'''
-    grq_ip = app.conf['GRQ_ES_URL'].rstrip(':9200').replace('http://', 'https://')
+    grq_ip = app.conf['GRQ_ES_URL'].replace(':9200', '').replace('http://', 'https://')
     grq_url = '{0}/es/grq_*_s1-gunw-ifg-blacklist/_search'.format(grq_ip)
     es_query = {"query":{"bool":{"must":[{"match_all":{}}]}}, "from":0, "size":1000}
     return query_es(grq_url, es_query)
