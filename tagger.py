@@ -201,12 +201,18 @@ def build_hashed_dict(object_list):
         hashed_dict.update({gen_hash(obj):obj})
     return hashed_dict
 
+
 def gen_hash(es_object):
     '''Generates a hash from the master and slave scene list'''
     #master = pickle.dumps(sorted(es_object['_source']['metadata']['master_scenes']))
     #slave = pickle.dumps(sorted(es_object['_source']['metadata']['slave_scenes']))
     #return '{}_{}'.format(hashlib.md5(master).hexdigest(), hashlib.md5(slave).hexdigest())
-    met = es_object.get('_source', {}).get('metadata', {})
+    dataset_type = es_object.get('_source', {}).get('dataset', {})
+    if dataset_type == 'S1-GUNW':
+        # gunw's master and slave scenes are nested
+        met = es_object.get('_source', {}).get('metadata', {}).get('context', {}).get('input_metadata', {})
+    else:
+        met = es_object.get('_source', {}).get('metadata', {})
     master = [get_starttime(x) for x in met.get('master_scenes', [])]
     slave = [get_starttime(x) for x in met.get('slave_scenes', [])]
     master = pickle.dumps(sorted(master))
