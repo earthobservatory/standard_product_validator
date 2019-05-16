@@ -1,0 +1,9 @@
+   {
+      "ipath": "ariamh::data/s1-gunw-ifg-blacklist",
+      "match_pattern": "/(?P<id>s1-gunw-ifg-blacklist_.*?)$",
+      "alt_match_pattern": null,
+      "extractor": null,
+      "level": "l1",
+      "type": "ancillary",
+      "version" : "1.0"
+   }

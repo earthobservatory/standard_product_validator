@@ -23,8 +23,8 @@ def main():
     current_retry_count = ctx.get('current_retry_count', 0)
     if isinstance(current_retry_count, list):
         current_retry_count = current_retry_count[0] # if it's a list get the first item (will return list as lambda)
-    master_slcs = ctx.get('master_slcs', False)
-    slave_slcs = ctx.get('slave_slcs', False)
+    master_slcs = ctx.get('master_slcs', False)[0]
+    slave_slcs = ctx.get('slave_slcs', False)[0]
     #check if job retry counts are appropriate
     if current_retry_count < required_retry_count:
         print('current job retry_count of {} less than the required of {}. Exiting.'.format(current_retry_count, required_retry_count))
@@ -44,10 +44,12 @@ def get_ifg_cfg(master_slcs, slave_slcs):
     '''es query for the associated ifg-cfg'''
     grq_ip = app.conf['GRQ_ES_URL'].replace(':9200', '').replace('http://', 'https://')
     grq_url = '{0}/es/grq_*_s1-gunw-ifg-cfg/_search'.format(grq_ip)
+    print('slave slcs: {}'.format(slave_slcs))
     #build es query
     master_term = ','.join([json.dumps({"term":{"metadata.master_slcs.raw": x}}) for x in master_slcs])
     slave_term = ','.join([json.dumps({"term":{"metadata.slave_slcs.raw": x}}) for x in slave_slcs])
     es_query = json.loads('{"query":{"bool":{"must":[' + master_term + ',' + slave_term + ']}},"from":0,"size":10}')
+    print('es query: {}'.format(json.dumps(es_query)))
     results = query_es(grq_url, es_query)
     return results[0]
 
