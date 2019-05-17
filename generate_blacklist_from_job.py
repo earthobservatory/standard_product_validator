@@ -46,7 +46,7 @@ def get_ifg_cfg(master_slcs, slave_slcs):
     grq_ip = app.conf['GRQ_ES_URL'].replace(':9200', '').replace('http://', 'https://')
     grq_url = '{0}/es/grq_*_s1-gunw-ifg-cfg/_search'.format(grq_ip)
     hsh = gen_direct_hash(master_slcs, slave_slcs)
-    es_query = json.loads({"query":{"bool":{"must":[{"term":{"metadata.full_id_hash.raw":hsh}}]}},"from":0,"size":10})
+    es_query = {"query":{"bool":{"must":[{"term":{"metadata.full_id_hash.raw":hsh}}]}},"from":0,"size":10}
     print('es query: {}'.format(json.dumps(es_query)))
     results = query_es(grq_url, es_query)
     return results[0]
