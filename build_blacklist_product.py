@@ -72,11 +72,11 @@ def gen_hash(es_obj):
 
 def get_master_date(ifg_cfg):
     '''returns the master date'''
-    return dateutil.parser.parse(ifg_cfg.get('endtime')).strftime('%Y%m%d')
+    return dateutil.parser.parse(ifg_cfg.get('_source').get('endtime')).strftime('%Y%m%d')
 
 def get_slave_date(ifg_cfg):
     '''returns the master date'''
-    return dateutil.parser.parse(ifg_cfg.get('starttime')).strftime('%Y%m%d')
+    return dateutil.parser.parse(ifg_cfg.get('_source').get('starttime')).strftime('%Y%m%d')
 
 def build_dataset(ifg_cfg):
     '''Generates the ds dict for the ifg-cfg-blacklist from an ifg-cfg'''
