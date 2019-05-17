@@ -1,5 +1,5 @@
    {
-      "ipath": "ariamh::data/s1-gunw-blacklist",
+      "ipath": "ariamh::data/S1-GUNW-BLACKLIST",
       "match_pattern": "/(?P<id>S1-GUNW-BLACKLIST-.*?)$",
       "alt_match_pattern": null,
       "extractor": null,
