@@ -20,12 +20,12 @@
     },
     {
       "name": "master_slcs",
-      "from": "dataset_jpath:_source.metadata",
+      "from": "dataset_jpath:_source.job.params.input_metadata",
       "lambda": "lambda x: x.get('master_scenes', x.get('reference_scenes'))"
     },
     { 
       "name": "slave_slcs",
-      "from": "dataset_jpath:_source.metadata",
+      "from": "dataset_jpath:_source.job.params.input_metadata",
       "lambda": "lambda x: x.get('slave_scenes', x.get('secondary_scenes'))"
     }
     ]
