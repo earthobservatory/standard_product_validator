@@ -23,8 +23,8 @@ def main():
     current_retry_count = ctx.get('current_retry_count', 0)
     if isinstance(current_retry_count, list):
         current_retry_count = current_retry_count[0] # if it's a list get the first item (will return list as lambda)
-    master_slcs = ctx.get('master_slcs', False)[0]
-    slave_slcs = ctx.get('slave_slcs', False)[0]
+    master_slcs = ctx.get('master_slcs', False)
+    slave_slcs = ctx.get('slave_slcs', False)
     #check if job retry counts are appropriate
     if current_retry_count < required_retry_count:
         print('current job retry_count of {} less than the required of {}. Exiting.'.format(current_retry_count, required_retry_count))

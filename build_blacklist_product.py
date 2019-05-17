@@ -4,16 +4,17 @@
 Builds a s1-ifg-blacklist product from an ifg-cfg product
 '''
 
+from __future__ import print_function
 import os
 import json
 import shutil
-import pickle
 import hashlib
+import dateutil.parser
 from hysds.celery import app
 from hysds.dataset_ingest import ingest
 
 VERSION = 'v1.0'
-PRODUCT_PREFIX = 's1-gunw-ifg-blacklist'
+PRODUCT_PREFIX = 'S1-GUNW-BLACKLIST'
 
 
 def build(ifg_cfg):
@@ -27,24 +28,55 @@ def build(ifg_cfg):
     print('    starttime:      {0}'.format(ds['starttime']))
     print('    endtime:        {0}'.format(ds['endtime']))
     print('    location:       {0}'.format(ds['location']))
-    print('    master_scenes:  {0}'.format(met['master_scenes']))
-    print('    slave_scenes:   {0}'.format(met['slave_scenes']))
-    print('    master_slcs:    {0}'.format(met.get('master_slcs', False)))
-    print('    slave_slcs:     {0}'.format(met.get('slave_slcs', False)))
 
-
-def build_id(s1_ifg):
+def build_id(ifg):
     global VERSION
     global PRODUCT_PREFIX
-    hsh = gen_hash(s1_ifg)
-    uid = '{}_{}_{}'.format(PRODUCT_PREFIX, hsh, VERSION)
+    hsh = gen_hash(ifg)
+    master_date = get_master_date(ifg)
+    slave_date = get_slave_date(ifg)
+    uid = '{}-{}_{}-{}-{}'.format(PRODUCT_PREFIX, master_date, slave_date, hsh, VERSION)
     return uid
 
-def gen_hash(es_object):
-    '''Generates a hash from the master and slave scene list'''
-    master = pickle.dumps(sorted(es_object['_source']['metadata']['master_scenes']))
-    slave = pickle.dumps(sorted(es_object['_source']['metadata']['slave_scenes']))
-    return '{}_{}'.format(hashlib.md5(master).hexdigest(), hashlib.md5(slave).hexdigest())
+def get_hash(es_obj):
+    '''retrieves the full_id_hash. if it doesn't exists, it
+        attempts to generate one'''
+    full_id_hash = es_obj.get('_source', {}).get('metadata', {}).get('full_id_hash', False)
+    if full_id_hash:
+        return full_id_hash
+    return gen_hash(es_obj)
+
+def gen_hash(es_obj):
+    '''copy of hash used in the enumerator'''
+    met = es_obj.get('_source', {}).get('metadata', {})
+    master_slcs = met.get('master_scenes', met.get('reference_scenes', False))
+    slave_slcs = met.get('slave_scenes', met.get('secondary_scenes', False))
+    master_ids_str = ""
+    slave_ids_str = ""
+    for slc in sorted(master_slcs):
+        if isinstance(slc, tuple) or isinstance(slc, list):
+            slc = slc[0]
+        if master_ids_str == "":
+            master_ids_str = slc
+        else:
+            master_ids_str += " "+slc
+    for slc in sorted(slave_slcs):
+        if isinstance(slc, tuple) or isinstance(slc, list):
+            slc = slc[0]
+        if slave_ids_str == "":
+            slave_ids_str = slc
+        else:
+            slave_ids_str += " "+slc
+    id_hash = hashlib.md5(json.dumps([master_ids_str, slave_ids_str]).encode("utf8")).hexdigest()
+    return id_hash
+
+def get_master_date(ifg_cfg):
+    '''returns the master date'''
+    return dateutil.parser.parse(ifg_cfg.get('endtime')).strftime('%Y%m%d')
+
+def get_slave_date(ifg_cfg):
+    '''returns the master date'''
+    return dateutil.parser.parse(ifg_cfg.get('starttime')).strftime('%Y%m%d')
 
 def build_dataset(ifg_cfg):
     '''Generates the ds dict for the ifg-cfg-blacklist from an ifg-cfg'''
@@ -52,26 +84,27 @@ def build_dataset(ifg_cfg):
     starttime = ifg_cfg['_source']['metadata']['starttime']
     endtime = ifg_cfg['_source']['metadata']['endtime']
     location = ifg_cfg['_source']['metadata']['union_geojson']
-    global VERSION
     ds = {'label':uid, 'starttime':starttime, 'endtime':endtime, 'location':location, 'version':VERSION}
     return ds
 
 def build_met(ifg_cfg):
     '''Generates the met dict for the ifg-cfg-blacklist from an ifg-cfg'''
-    master_list = ifg_cfg['_source']['metadata']['master_scenes']
-    slave_list = ifg_cfg['_source']['metadata']['slave_scenes']
-    master_slcs = ifg_cfg['_source']['metadata']['master_slcs']
-    slave_slcs = ifg_cfg['_source']['metadata']['slave_slcs']
+    met = ifg_cfg.get('_source', {}).get('metadata', {})
+    master_scenes = met.get('master_scenes', met.get('reference_scenes', False))
+    slave_scenes = met.get('slave_scenes', met.get('secondary_scenes', False))
     track = ifg_cfg['_source']['metadata'].get('track_number', False)
     if track is False:
         track = ifg_cfg['_source']['metadata'].get('track', False)
     master_orbit_file = ifg_cfg['_source']['metadata'].get('master_orbit_file', False)
     slave_orbit_file = ifg_cfg['_source']['metadata'].get('slave_orbit_file', False)
-    met = {'master_scenes': master_list, 'slave_scenes': slave_list, 'master_slcs': master_slcs, 'slave_slcs': slave_slcs,
-           'master_orbit_file': master_orbit_file, 'slave_orbit_file': slave_orbit_file, 'track_number': track}
+    hsh = get_hash(ifg_cfg)
+    met = {'reference_scenes': master_scenes, 'secondary_scenes': slave_scenes, 'master_slcs': master_slcs,
+           'master_orbit_file': master_orbit_file, 'slave_orbit_file': slave_orbit_file, 'track_number': track,
+    'full_id_hash': hsh}
     return met
 
 def build_product_dir(ds, met):
+    '''generates the blacklist product'''
     label = ds['label']
     ds_dir = os.path.join(os.getcwd(), label)
     ds_path = os.path.join(ds_dir, '{0}.dataset.json'.format(label))
@@ -90,5 +123,5 @@ def submit_product(ds):
         ingest(uid, './datasets.json', app.conf.GRQ_UPDATE_URL, app.conf.DATASET_PROCESSED_QUEUE, ds_dir, None)
         if os.path.exists(uid):
             shutil.rmtree(uid)
-    except Exception, err:
-        print('failed on submission of {0} with {1}'.format(uid, err))
+    except Exception:
+        print('failed on submission of {0}'.format(uid))
