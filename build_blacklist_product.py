@@ -98,7 +98,7 @@ def build_met(ifg_cfg):
     master_orbit_file = ifg_cfg['_source']['metadata'].get('master_orbit_file', False)
     slave_orbit_file = ifg_cfg['_source']['metadata'].get('slave_orbit_file', False)
     hsh = get_hash(ifg_cfg)
-    met = {'reference_scenes': master_scenes, 'secondary_scenes': slave_scenes, 'master_slcs': master_slcs,
+    met = {'reference_scenes': master_scenes, 'secondary_scenes': slave_scenes,
            'master_orbit_file': master_orbit_file, 'slave_orbit_file': slave_orbit_file, 'track_number': track,
     'full_id_hash': hsh}
     return met
