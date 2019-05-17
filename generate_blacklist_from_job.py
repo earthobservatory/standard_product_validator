@@ -7,6 +7,7 @@ from that job.
 
 from __future__ import print_function
 import json
+import hashlib
 import requests
 
 import build_blacklist_product
@@ -44,11 +45,8 @@ def get_ifg_cfg(master_slcs, slave_slcs):
     '''es query for the associated ifg-cfg'''
     grq_ip = app.conf['GRQ_ES_URL'].replace(':9200', '').replace('http://', 'https://')
     grq_url = '{0}/es/grq_*_s1-gunw-ifg-cfg/_search'.format(grq_ip)
-    print('slave slcs: {}'.format(slave_slcs))
-    #build es query
-    master_term = ','.join([json.dumps({"term":{"metadata.master_slcs.raw": x}}) for x in master_slcs])
-    slave_term = ','.join([json.dumps({"term":{"metadata.slave_slcs.raw": x}}) for x in slave_slcs])
-    es_query = json.loads('{"query":{"bool":{"must":[' + master_term + ',' + slave_term + ']}},"from":0,"size":10}')
+    hsh = gen_direct_hash(master_slcs, slave_slcs)
+    es_query = json.loads({"query":{"bool":{"must":[{"term":{"metadata.full_id_hash.raw":hsh}}]}},"from":0,"size":10})
     print('es query: {}'.format(json.dumps(es_query)))
     results = query_es(grq_url, es_query)
     return results[0]
@@ -83,6 +81,43 @@ def query_es(grq_url, es_query):
         results = json.loads(response.text, encoding='ascii')
         results_list.extend(results.get('hits', {}).get('hits', []))
     return results_list
+
+def get_hash(es_obj):
+    '''retrieves the full_id_hash. if it doesn't exists, it
+        attempts to generate one'''
+    full_id_hash = es_obj.get('_source', {}).get('metadata', {}).get('full_id_hash', False)
+    if full_id_hash:
+        return full_id_hash
+    return gen_hash(es_obj)
+
+def gen_hash(es_obj):
+    '''copy of hash used in the enumerator'''
+    met = es_obj.get('_source', {}).get('metadata', {})
+    master_slcs = met.get('master_scenes', met.get('reference_scenes', False))
+    slave_slcs = met.get('slave_scenes', met.get('secondary_scenes', False))
+    return gen_direct_hash(master_slcs, slave_slcs)
+
+def gen_direct_hash(master_slcs, slave_slcs):
+    '''generates hash directly from slcs'''
+    master_ids_str = ""
+    slave_ids_str = ""
+    for slc in sorted(master_slcs):
+        if isinstance(slc, tuple) or isinstance(slc, list):
+            slc = slc[0]
+        if master_ids_str == "":
+            master_ids_str = slc
+        else:
+            master_ids_str += " "+slc
+    for slc in sorted(slave_slcs):
+        if isinstance(slc, tuple) or isinstance(slc, list):
+            slc = slc[0]
+        if slave_ids_str == "":
+            slave_ids_str = slc
+        else:
+            slave_ids_str += " "+slc
+    id_hash = hashlib.md5(json.dumps([master_ids_str, slave_ids_str]).encode("utf8")).hexdigest()
+    return id_hash
+
 
 def load_context():
     '''loads the context file into a dict'''
