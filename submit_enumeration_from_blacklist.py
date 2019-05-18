@@ -40,6 +40,7 @@ def main():
     poeorb = get_poeorb(poeorb_id)
     #submit enumeration job per aoi
     for aoi in aois:
+        print('submitting enumeration job for poeorb id: {}, over aoi: {}, with track: {}'.format(poeorb_id, aoi, track))
         submit_enum_job(poeorb, aoi, track, queue, version, minmatch, acquisition_version, skip_days, False)
 
 def get_aois(full_id_hash):
@@ -97,7 +98,7 @@ def query_es(grq_url, es_query):
         from_position = 0
         es_query['from'] = from_position
     #run the query and iterate until all the results have been returned
-    print('querying: {}\n{}'.format(grq_url, json.dumps(es_query)))
+    #print('querying: {}\n{}'.format(grq_url, json.dumps(es_query)))
     response = requests.post(grq_url, data=json.dumps(es_query), verify=False)
     response.raise_for_status()
     results = json.loads(response.text, encoding='ascii')
@@ -117,7 +118,7 @@ def submit_enum_job(poeorb, aoi, track, queue, job_version, minmatch, acquisitio
     priority = 5
     tags = 'enumeration_from_blacklist'
     job_params = {
-        "aoi_name": aoi.get('_id'),
+        "aoi_name": aoi,
         "workflow": "orbit_acquisition_enumerator_standard_product.sf.xml",
         "project": "grfn",
         "dataset_version": "v2.0.0",
