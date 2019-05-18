@@ -1,0 +1,52 @@
+{
+    "label": "Submit Enumeration Job from Blacklist Product",
+    "submission_type": "iteration",
+    "enable_dedup": false,
+    "params" : [
+    {
+      "name": "prod_type",
+      "from": "dataset_jpath:_type"
+    },
+    {
+      "name": "master_orbit_file",
+      "from": "dataset_jpath:_source.metadata.master_orbit_file"
+    },
+    {
+      "name": "full_id_hash",
+      "from":  "dataset_jpath:_source.metadata.full_id_hash"
+    },
+    {
+      "name": "enumeration_job_version",
+      "from": "submitter",
+      "type": "jobspec_version",
+      "version_regex": "job-standard_product-s1gunw-acq_enumerator"
+    },
+    {
+      "name": "enumerator_queue",
+      "from": "submitter",
+      "default": "standard_product-s1gunw-acq_enumerator",
+      "optional": true
+    },
+    { 
+      "name": "minMatch",
+      "from": "submitter",
+      "type": "number",
+      "lambda": "lambda x: int(x)",
+      "default": "2"
+    },
+    { 
+      "name": "acquisition_version",
+      "from": "submitter",
+      "type": "text",
+      "default": "v2.0" 
+    },
+    {
+      "name": "skipDays",
+      "from": "submitter",
+      "type": "number",
+      "lambda": "lambda x: int(x)",
+      "default": "0",
+      "optional": true
+    }
+    ]
+}
