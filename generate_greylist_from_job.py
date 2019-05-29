@@ -49,6 +49,8 @@ def get_ifg_cfg(master_slcs, slave_slcs):
     es_query = {"query":{"bool":{"must":[{"term":{"metadata.full_id_hash.raw":hsh}}]}},"from":0,"size":10}
     print('es query: {}'.format(json.dumps(es_query)))
     results = query_es(grq_url, es_query)
+    if len(results)<1:
+        raise RuntimeError("Failed to get ifg_cfg with full_id_hash : {}".format(hsh))
     return results[0]
 
 def query_es(grq_url, es_query):
