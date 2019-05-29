@@ -93,13 +93,14 @@ def build_met(ifg_cfg):
     master_scenes = met.get('master_scenes', met.get('reference_scenes', False))
     slave_scenes = met.get('slave_scenes', met.get('secondary_scenes', False))
     track = ifg_cfg['_source']['metadata'].get('track_number', False)
+    orbit_number = ifg_cfg['_source']['metadata'].get('orbitNumber', False)
     if track is False:
         track = ifg_cfg['_source']['metadata'].get('track', False)
     master_orbit_file = ifg_cfg['_source']['metadata'].get('master_orbit_file', False)
     slave_orbit_file = ifg_cfg['_source']['metadata'].get('slave_orbit_file', False)
     hsh = get_hash(ifg_cfg)
     met = {'reference_scenes': master_scenes, 'secondary_scenes': slave_scenes,
-           'master_orbit_file': master_orbit_file, 'slave_orbit_file': slave_orbit_file, 'track_number': track,
+           'master_orbit_file': master_orbit_file, 'slave_orbit_file': slave_orbit_file, 'track_number': track, 'orbit_number': orbit_number,
     'full_id_hash': hsh}
     return met
 
