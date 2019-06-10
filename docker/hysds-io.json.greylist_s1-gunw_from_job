@@ -2,7 +2,6 @@
     "label": "Standard Product S1-GUNW - Greylist S1-GUNW from topsapp job",
     "component":"mozart",
     "submission_type": "iteration",
-    "enable_dedup": false,
     "params" : [
     {
       "name": "required_retry_count",

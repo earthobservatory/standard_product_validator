@@ -13,6 +13,60 @@ import requests
 import build_blacklist_product
 from hysds.celery import app
 
+
+def get_dataset_by_hash(ifg_hash, es_index="grq"):
+    """Query for existence of dataset by ID."""
+
+    uu = UrlUtils()
+    es_url = uu.rest_url
+    #es_index = "{}_{}_s1-ifg".format(uu.grq_index_prefix, version)
+
+    # query
+    query = {
+        "query":{
+            "bool":{
+                "must":[
+                    { "term":{"metadata.full_id_hash.raw": ifg_hash} },
+                    { "term":{"dataset.raw": "S1-GUNW-BLACKLIST"} }
+                ]
+            }
+        }
+        
+    }
+
+    logger.info(query)
+
+    if es_url.endswith('/'):
+        search_url = '%s%s/_search' % (es_url, es_index)
+    else:
+        search_url = '%s/%s/_search' % (es_url, es_index)
+    logger.info("search_url : %s" %search_url)
+
+    r = requests.post(search_url, data=json.dumps(query))
+    r.raise_for_status()
+
+    if r.status_code != 200:
+        logger.info("Failed to query %s:\n%s" % (es_url, r.text))
+        logger.info("query: %s" % json.dumps(query, indent=2))
+        logger.info("returned: %s" % r.text)
+        raise RuntimeError("Failed to query %s:\n%s" % (es_url, r.text))
+    result = r.json()
+    logger.info(result['hits']['total'])
+    return result
+
+def check_ifg_status_by_hash(new_ifg_hash):
+    es_index="grq_*_s1-gunw-blacklist"
+    result = get_dataset_by_hash(new_ifg_hash, es_index)
+    total = result['hits']['total']
+    logger.info("check_slc_status_by_hash : total : %s" %total)
+    if total>0:
+        found_id = result['hits']['hits'][0]["_id"]
+        logger.info("Duplicate Blacklist dataset found: %s" %found_id)
+        sys.exit(0)
+
+    logger.info("check_slc_status : returning False")
+    return False
+
 def main():
     '''
     Pulls the job info from context, and generates appropriate blacklist products for
@@ -26,6 +80,12 @@ def main():
         current_retry_count = current_retry_count[0] # if it's a list get the first item (will return list as lambda)
     master_slcs = ctx.get('master_slcs', False)
     slave_slcs = ctx.get('slave_slcs', False)
+    hsh = gen_direct_hash(master_slcs, slave_slcs)
+    if check_ifg_status_by_hash(hsh):
+        err = "S1-GUNW-BLACKLIST Found with full_hash_id: %s" %hsh
+        logger.info(err)
+        sys.exit(0)
+
     #check if job retry counts are appropriate
     if current_retry_count < required_retry_count:
         print('current job retry_count of {} less than the required of {}. Exiting.'.format(current_retry_count, required_retry_count))
