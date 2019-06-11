@@ -8,6 +8,7 @@ from that job.
 from __future__ import print_function
 import json
 import hashlib
+import os, sys
 import requests
 
 import build_blacklist_product
