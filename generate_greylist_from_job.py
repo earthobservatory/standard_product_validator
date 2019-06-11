@@ -34,33 +34,33 @@ def get_dataset_by_hash(ifg_hash, es_index="grq"):
         
     }
 
-    logger.info(query)
+    print(query)
 
-    logger.info("search_url : %s" %search_url)
+    print("search_url : %s" %search_url)
 
     r = requests.post(search_url, data=json.dumps(query))
     r.raise_for_status()
 
     if r.status_code != 200:
-        logger.info("Failed to query %s:\n%s" % (es_url, r.text))
-        logger.info("query: %s" % json.dumps(query, indent=2))
-        logger.info("returned: %s" % r.text)
+        print("Failed to query %s:\n%s" % (es_url, r.text))
+        print("query: %s" % json.dumps(query, indent=2))
+        print("returned: %s" % r.text)
         raise RuntimeError("Failed to query %s:\n%s" % (es_url, r.text))
     result = r.json()
-    logger.info(result['hits']['total'])
+    print(result['hits']['total'])
     return result
 
 def check_ifg_status_by_hash(new_ifg_hash):
     es_index="grq_*_s1-gunw-greylist"
     result = get_dataset_by_hash(new_ifg_hash, es_index)
     total = result['hits']['total']
-    logger.info("check_slc_status_by_hash : total : %s" %total)
+    print("check_slc_status_by_hash : total : %s" %total)
     if total>0:
         found_id = result['hits']['hits'][0]["_id"]
-        logger.info("Duplicate Greylist dataset found: %s" %found_id)
+        print("Duplicate Greylist dataset found: %s" %found_id)
         sys.exit(0)
 
-    logger.info("check_slc_status : returning False")
+    print("check_slc_status : returning False")
     return False
 
 def main():
@@ -79,7 +79,7 @@ def main():
     hsh = gen_direct_hash(master_slcs, slave_slcs)
     if check_ifg_status_by_hash(hsh):
         err = "S1-GUNW-GREYLIST Found with full_hash_id : %s" %hsh
-        logger.info(err)
+        print(err)
         sys.exit(0)
 
     #check if job retry counts are appropriate
