@@ -17,9 +17,8 @@ from hysds.celery import app
 def get_dataset_by_hash(ifg_hash, es_index="grq"):
     """Query for existence of dataset by ID."""
 
-    uu = UrlUtils()
-    es_url = uu.rest_url
-    #es_index = "{}_{}_s1-ifg".format(uu.grq_index_prefix, version)
+    grq_ip = app.conf['GRQ_ES_URL'].replace(':9200', '').replace('http://', 'https://')
+    search_url = '{0}/es/grq_*_s1-gunw-blacklist/_search'.format(grq_ip)
 
     # query
     query = {
@@ -36,10 +35,6 @@ def get_dataset_by_hash(ifg_hash, es_index="grq"):
 
     logger.info(query)
 
-    if es_url.endswith('/'):
-        search_url = '%s%s/_search' % (es_url, es_index)
-    else:
-        search_url = '%s/%s/_search' % (es_url, es_index)
     logger.info("search_url : %s" %search_url)
 
     r = requests.post(search_url, data=json.dumps(query))
