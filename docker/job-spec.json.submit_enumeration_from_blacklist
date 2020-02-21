@@ -1,0 +1,45 @@
+{
+  "command":"/home/ops/verdi/ops/standard_product_validator/submit_enumeration_from_blacklist.py",
+  "imported_worker_files": {
+    "/home/ops/.netrc": "/home/ops/.netrc",
+    "/home/ops/.aws": "/home/ops/.aws"
+  },
+  "disk_usage":"2GB",
+  "recommended-queues": ["factotum-job_worker-small"],
+  "soft_time_limit": 1000,
+  "time_limit": 1200,
+  "params" : [
+  {
+    "name": "prod_type",
+    "destination": "context"
+  },
+  {
+    "name": "master_orbit_file",
+    "destination": "context"
+  },
+  {
+    "name": "full_id_hash",
+    "destination": "context"
+  },
+  {
+    "name": "enumeration_job_version",
+    "destination": "context"
+  },
+  {
+    "name": "enumerator_queue",
+    "destination": "context"
+  },
+  {
+    "name": "minMatch",
+    "destination": "context"
+  },
+  {
+    "name": "acquisition_version",
+    "destination": "context"
+  },
+  {
+    "name": "skipDays",
+    "destination": "context"
+  }
+  ]
+}

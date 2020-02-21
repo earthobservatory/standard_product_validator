@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 '''
-Builds a s1-ifg-blacklist product from an ifg-cfg product
+Builds a s1-ifg-greylist product from an ifg-cfg product
 '''
 
 from __future__ import print_function
@@ -14,11 +14,11 @@ from hysds.celery import app
 from hysds.dataset_ingest import ingest
 
 VERSION = 'v1.0'
-PRODUCT_PREFIX = 'S1-GUNW-BLACKLIST'
+PRODUCT_PREFIX = 'S1-GUNW-GREYLIST'
 
 
 def build(ifg_cfg):
-    '''Builds and submits a s1-ifg-blacklist product from an ifg_cfg.'''
+    '''Builds and submits a s1-ifg-greylist product from an ifg_cfg.'''
     ds = build_dataset(ifg_cfg)
     met = build_met(ifg_cfg)
     build_product_dir(ds, met)
@@ -79,7 +79,7 @@ def get_slave_date(ifg_cfg):
     return dateutil.parser.parse(ifg_cfg.get('_source').get('starttime')).strftime('%Y%m%d')
 
 def build_dataset(ifg_cfg):
-    '''Generates the ds dict for the ifg-cfg-blacklist from an ifg-cfg'''
+    '''Generates the ds dict for the ifg-cfg-greylist from an ifg-cfg'''
     uid = build_id(ifg_cfg)
     starttime = ifg_cfg['_source']['metadata']['starttime']
     endtime = ifg_cfg['_source']['metadata']['endtime']
@@ -88,23 +88,24 @@ def build_dataset(ifg_cfg):
     return ds
 
 def build_met(ifg_cfg):
-    '''Generates the met dict for the ifg-cfg-blacklist from an ifg-cfg'''
+    '''Generates the met dict for the ifg-cfg-greylist from an ifg-cfg'''
     met = ifg_cfg.get('_source', {}).get('metadata', {})
     master_scenes = met.get('master_scenes', met.get('reference_scenes', False))
     slave_scenes = met.get('slave_scenes', met.get('secondary_scenes', False))
     track = ifg_cfg['_source']['metadata'].get('track_number', False)
+    orbit_number = ifg_cfg['_source']['metadata'].get('orbitNumber', False)
     if track is False:
         track = ifg_cfg['_source']['metadata'].get('track', False)
     master_orbit_file = ifg_cfg['_source']['metadata'].get('master_orbit_file', False)
     slave_orbit_file = ifg_cfg['_source']['metadata'].get('slave_orbit_file', False)
     hsh = get_hash(ifg_cfg)
     met = {'reference_scenes': master_scenes, 'secondary_scenes': slave_scenes,
-           'master_orbit_file': master_orbit_file, 'slave_orbit_file': slave_orbit_file, 'track_number': track,
+           'master_orbit_file': master_orbit_file, 'slave_orbit_file': slave_orbit_file, 'track_number': track, 'orbit_number': orbit_number,
     'full_id_hash': hsh}
     return met
 
 def build_product_dir(ds, met):
-    '''generates the blacklist product'''
+    '''generates the product'''
     label = ds['label']
     ds_dir = os.path.join(os.getcwd(), label)
     ds_path = os.path.join(ds_dir, '{0}.dataset.json'.format(label))

@@ -12,7 +12,7 @@ import argparse
 import requests
 from hysds.celery import app
 
-def main(job_name, job_params, job_version, queue, priority, tags):
+def main(job_name, job_params, job_version, queue, priority, tags, enable_dedup=True):
     '''
     submits a job to mozart to start pager job
     '''
@@ -24,7 +24,7 @@ def main(job_name, job_params, job_version, queue, priority, tags):
         'tags': '[{0}]'.format(parse_job_tags(tags)),
         'type': '%s:%s' % (job_name, job_version),
         'params': json.dumps(job_params),
-        'enable_dedup': True
+        'enable_dedup': enable_dedup
     }
     print('submitting jobs with params: %s' %  json.dumps(params))
     r = requests.post(job_submit_url, params=params, verify=False)

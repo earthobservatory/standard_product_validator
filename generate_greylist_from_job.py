@@ -1,24 +1,25 @@
 #!/usr/bin/env python
 
 '''
-From an input hysds job, attempts to generate a blacklist product for the expected product
+From an input hysds job, attempts to generate a greylist product for the expected product
 from that job.
 '''
 
 from __future__ import print_function
 import json
-import hashlib
 import os, sys
+import hashlib
 import requests
 
-import build_blacklist_product
+import build_greylist_product
 from hysds.celery import app
 
+GRQ_URL = app.conf.GRQ_ES_URL
 
 def get_dataset_by_hash(ifg_hash, es_index="grq"):
     """Query for existence of dataset by ID."""
 
-    es_url = app.conf.GRQ_ES_URL
+    es_url = GRQ_URL
 
     # query
     query = {
@@ -26,7 +27,7 @@ def get_dataset_by_hash(ifg_hash, es_index="grq"):
             "bool":{
                 "must":[
                     { "term":{"metadata.full_id_hash.raw": ifg_hash} },
-                    { "term":{"dataset.raw": "S1-GUNW-BLACKLIST"} }
+                    { "term":{"dataset.raw": "S1-GUNW-GREYLIST"} }
                 ]
             }
         }
@@ -34,6 +35,7 @@ def get_dataset_by_hash(ifg_hash, es_index="grq"):
     }
 
     print(query)
+
     if es_url.endswith('/'):
         search_url = '%s%s/_search' % (es_url, es_index)
     else:
@@ -55,13 +57,13 @@ def get_dataset_by_hash(ifg_hash, es_index="grq"):
     return result
 
 def check_ifg_status_by_hash(new_ifg_hash):
-    es_index="grq_*_s1-gunw-blacklist"
+    es_index="grq_*_s1-gunw-greylist"
     result = get_dataset_by_hash(new_ifg_hash, es_index)
     total = result['hits']['total']
     print("check_slc_status_by_hash : total : %s" %total)
     if total>0:
         found_id = result['hits']['hits'][0]["_id"]
-        print("Duplicate Blacklist dataset found: %s" %found_id)
+        print("Duplicate Greylist dataset found: %s" %found_id)
         sys.exit(0)
 
     print("check_slc_status : returning False")
@@ -69,7 +71,7 @@ def check_ifg_status_by_hash(new_ifg_hash):
 
 def main():
     '''
-    Pulls the job info from context, and generates appropriate blacklist products for
+    Pulls the job info from context, and generates appropriate greylist products for
     the given job.
     '''
     print('Loading variables from context...')
@@ -82,7 +84,7 @@ def main():
     slave_slcs = ctx.get('slave_slcs', False)
     hsh = gen_direct_hash(master_slcs, slave_slcs)
     if check_ifg_status_by_hash(hsh):
-        err = "S1-GUNW-BLACKLIST Found with full_hash_id: %s" %hsh
+        err = "S1-GUNW-GREYLIST Found with full_hash_id : %s" %hsh
         print(err)
         sys.exit(0)
 
@@ -98,8 +100,8 @@ def main():
     print('querying for appropriate ifg-cfg...')
     ifg_cfg = get_ifg_cfg(master_slcs, slave_slcs)
     print('ifg found: {}'.format(ifg_cfg))
-    print('building blacklist product')
-    build_blacklist_product.build(ifg_cfg)
+    print('building greylist product')
+    build_greylist_product.build(ifg_cfg)
 
 def get_ifg_cfg(master_slcs, slave_slcs):
     '''es query for the associated ifg-cfg'''

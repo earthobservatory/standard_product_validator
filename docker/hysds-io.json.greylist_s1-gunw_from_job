@@ -1,5 +1,5 @@
 {
-    "label": "Standard Product S1-GUNW - Blacklist S1-GUNW from topsapp job",
+    "label": "Standard Product S1-GUNW - Greylist S1-GUNW from topsapp job",
     "component":"mozart",
     "submission_type": "iteration",
     "params" : [
